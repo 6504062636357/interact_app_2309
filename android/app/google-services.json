@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "168889136984",
+    "project_id": "interactedu-notify",
+    "storage_bucket": "interactedu-notify.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:168889136984:android:3fd6981804c047d8f2172d",
+        "android_client_info": {
+          "package_name": "com.example.interact_app_2309"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD49nTw8T8UYBqlfxYC7xz8tY1vRbQk7h0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
