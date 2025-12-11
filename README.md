@@ -1,6 +1,6 @@
 # interact_app_2309
 
-A new Flutter project.
+FRONT END
 
 ## Getting Started
 
