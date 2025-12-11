@@ -19,7 +19,8 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.2
+  # ปรับช่วงเวอร์ชัน Dart ให้รองรับ 3.8.1 ที่อ้อมใช้อยู่
+  sdk: '>=3.8.1 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -36,6 +37,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.5.0
   shared_preferences: ^2.5.3
+
+  # Firebase
+  firebase_core: ^3.0.0
+  firebase_messaging: ^15.0.0
 
 dev_dependencies:
   flutter_test:
