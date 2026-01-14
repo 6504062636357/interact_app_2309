@@ -5,7 +5,7 @@ import '../config.dart';
 
 class ApiService {
   // ******************************************************
-  // 1. AUTHENTICATION & TOKEN MANAGEMENT (ฟังก์ชันเดิม)
+  // 1. AUTHENTICATION & TOKEN MANAGEMENT
   // ******************************************************
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
@@ -51,7 +51,7 @@ class ApiService {
   }
 
   // ******************************************************
-  // 2. DASHBOARD DATA (ฟังก์ชันเดิม)
+  // 2. DASHBOARD DATA
   // ******************************************************
 
   static Future<Map<String, dynamic>> getDashboard() async {
@@ -71,44 +71,54 @@ class ApiService {
     }
   }
 
-
   // ******************************************************
-  // 3. COURSE PAGE DATA (ฟังก์ชันใหม่สำหรับหน้า Course)
+  // 3. COURSE PAGE DATA (พร้อมระบบ Filter ครบวงจร)
   // ******************************************************
 
-  // 1. ดึงรายการหมวดหมู่ทั้งหมด (เช่น Maths, Robotic)
+  // ดึงรายการหมวดหมู่ทั้งหมด
   static Future<List<String>> getCourseCategories() async {
     final res = await http.get(Uri.parse('${AppConfig.baseUrl}/api/courses/categories'));
-
     final data = json.decode(res.body);
     if (res.statusCode == 200) {
-      // Backend ส่ง {"categories": ["Maths", "Robotic", ...]}
       return List<String>.from(data['categories'] ?? []);
     } else {
       throw Exception(data['message'] ?? 'Failed to load categories');
     }
   }
 
-  // 2. ดึงรายการคอร์สทั้งหมด (พร้อม Filter, Sort, Search)
+  // ดึงรายการคอร์ส พร้อมรองรับ Search, Category, Sort, Price Range, และ Duration
   static Future<List<Map<String, dynamic>>> getCourses({
-    String? category, // ใช้สำหรับ Filter: "Maths" หรือ "Robotic"
-    String? sort,     // ใช้สำหรับ Sort: "popular" หรือ "new"
-    String? search    // ใช้สำหรับ Search Bar
+    String? category,
+    String? sort,
+    String? search,
+    double? minPrice,
+    double? maxPrice,
+    int? durationMin,
+    int? durationMax,
   }) async {
+    // สร้าง Query Parameters เป็น Map<String, String>
+    final Map<String, String> queryParams = {};
 
-    // สร้าง Query Parameters
-    final Map<String, dynamic> queryParams = {};
-    if (category != null) queryParams['category'] = category;
-    if (sort != null) queryParams['sort'] = sort;
-    if (search != null) queryParams['search'] = search;
+    if (category != null && category != 'All') queryParams['category'] = category;
+    if (sort != null && sort != 'All') queryParams['sort'] = sort.toLowerCase();
+    if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
-    // สร้าง URI ที่มี Query Params ติดไปด้วย
+    // เพิ่มการกรองราคา (ส่งไปเป็น String เพื่อต่อ URL)
+    if (minPrice != null) queryParams['minPrice'] = minPrice.toString();
+    if (maxPrice != null) queryParams['maxPrice'] = maxPrice.toString();
+
+    // เพิ่มการกรองชั่วโมงเรียน
+    if (durationMin != null) queryParams['durationMin'] = durationMin.toString();
+    if (durationMax != null) queryParams['durationMax'] = durationMax.toString();
+
+    // สร้าง URI สมบูรณ์ (เช่น .../api/courses?category=Robotic&minPrice=15000&maxPrice=20000)
     final uri = Uri.parse('${AppConfig.baseUrl}/api/courses').replace(queryParameters: queryParams);
-    final res = await http.get(uri);
 
+    final res = await http.get(uri);
     final data = json.decode(res.body);
+
     if (res.statusCode == 200) {
-      // Backend ส่งรายการคอร์ส [ {title: 'Robo Kiddy', price: 20000, ...}, ... ]
+      // คาดหวังว่า Backend จะส่ง List ของคอร์สกลับมาโดยตรง
       return List<Map<String, dynamic>>.from(data);
     } else {
       throw Exception(data['message'] ?? 'Failed to load courses');

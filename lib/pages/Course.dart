@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
 import '../services/api_service.dart';
 import '../model/course.model.dart';
+import 'CourseDetail.dart';
 
 class CoursePage extends StatefulWidget {
   const CoursePage({super.key});
@@ -10,323 +12,317 @@ class CoursePage extends StatefulWidget {
 }
 
 class _CoursePageState extends State<CoursePage> {
-  // State Variables
+  // --- Data Variables ---
   List<CourseModel> _allCourses = [];
-  List<String> _categories = [];
   bool _isLoading = true;
-  String? _selectedCategory;
+  String _errorMessage = '';
+
+  // --- Filter State ---
+  String _selectedCategory = 'All';
   String _selectedSort = 'All';
   String _searchText = '';
-  String _errorMessage = '';
+  RangeValues _priceRange = const RangeValues(0, 25000);
+  String? _selectedDuration;
+
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _fetchInitialData();
+    _fetchCoursesWithFilter();
+
+    _searchController.addListener(() {
+      if (_searchText != _searchController.text) {
+        setState(() {
+          _searchText = _searchController.text;
+        });
+        _fetchCoursesWithFilter();
+      }
+    });
   }
 
-  // ******************************************************
-  // 1. DATA FETCHING LOGIC (เหมือนเดิม)
-  // ******************************************************
-  Future<void> _fetchInitialData() async {
+  Future<void> _fetchCoursesWithFilter() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
     try {
-      final categories = await ApiService.getCourseCategories();
-      final courseData = await ApiService.getCourses();
-      final courses = courseData.map((json) => CourseModel.fromJson(json)).toList();
-
-      setState(() {
-        _categories = ['All', ...categories];
-        _allCourses = courses;
-        _isLoading = false;
-        if (_categories.isNotEmpty) {
-          _selectedCategory = 'All';
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Failed to load data: ${e.toString()}';
-      });
-    }
-  }
-
-  Future<void> _fetchCoursesWithFilter() async {
-    setState(() => _isLoading = true);
-    try {
-      String? categoryParam = _selectedCategory == 'All' ? null : _selectedCategory;
-      String? sortParam = _selectedSort == 'All' ? null : _selectedSort.toLowerCase();
+      String? categoryParam = (_selectedCategory == 'All') ? null : _selectedCategory;
+      String? sortParam = (_selectedSort == 'All') ? null : _selectedSort.toLowerCase();
       String? searchParam = _searchText.isEmpty ? null : _searchText;
 
       final courseData = await ApiService.getCourses(
         category: categoryParam,
         sort: sortParam,
         search: searchParam,
+        minPrice: _priceRange.start,
+        maxPrice: _priceRange.end,
       );
-      final courses = courseData.map((json) => CourseModel.fromJson(json)).toList();
 
       setState(() {
-        _allCourses = courses;
+        _allCourses = courseData.map((json) => CourseModel.fromJson(json)).toList();
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to load courses: ${e.toString()}';
+        _errorMessage = 'Error: ${e.toString()}';
       });
     }
   }
 
-  // ******************************************************
-  // 2. UI BUILD METHODS (ปรับปรุงดีไซน์)
-  // ******************************************************
+  void _showFilterBottomSheet() {
+    OnscreenKeyboard.of(context).close();
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50], // พื้นหลังสีเทาอ่อนเพื่อให้ Card เด่นขึ้น
-      body: CustomScrollView(
-        slivers: [
-          // 2.1 Header สีเหลือง + Search Bar
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 180.0,
-            backgroundColor: const Color(0xFFFFC107), // สีเหลือง Amber
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 60), // ขยับ Title ขึ้นหนี SearchBar
-              title: const Text(
-                'Course',
-                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 28),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.8,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              const Text("Search Filter",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    const Text("Categories", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ['Maths', 'Robotic', 'Science', 'Language'].map((cat) {
+                        bool isSel = _selectedCategory == cat;
+                        return ChoiceChip(
+                          label: Text(cat),
+                          selected: isSel,
+                          onSelected: (v) => setModalState(() => _selectedCategory = v ? cat : 'All'),
+                          selectedColor: const Color(0xFF4A68FF),
+                          backgroundColor: Colors.white,
+                          labelStyle: TextStyle(color: isSel ? Colors.white : Colors.black),
+                          showCheckmark: false,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 30),
+                    const Text("Price", style: TextStyle(fontWeight: FontWeight.bold)),
+                    RangeSlider(
+                      values: _priceRange,
+                      min: 0,
+                      max: 25000,
+                      activeColor: const Color(0xFF4A68FF),
+                      onChanged: (val) => setModalState(() => _priceRange = val),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("\$${_priceRange.start.toInt()}", style: const TextStyle(color: Colors.grey)),
+                        Text("\$${_priceRange.end.toInt()}", style: const TextStyle(color: Colors.grey))
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+                    const Text("Duration", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ['3-8 Hours', '8-14 Hours', '14-20 Hours'].map((dur) {
+                        bool isSel = _selectedDuration == dur;
+                        return ChoiceChip(
+                          label: Text(dur),
+                          selected: isSel,
+                          onSelected: (v) => setModalState(() => _selectedDuration = v ? dur : null),
+                          selectedColor: const Color(0xFF4A68FF),
+                          backgroundColor: Colors.white,
+                          labelStyle: TextStyle(color: isSel ? Colors.white : Colors.black),
+                          showCheckmark: false,
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
               ),
-              background: Stack(
-                children: [
-                  Container(color: const Color(0xFFFFC107)), // พื้นหลังสีเหลือง
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50], // โค้งรับกับ Body ด้านล่าง
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(30),
-                          topRight: Radius.circular(30),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          side: const BorderSide(color: Colors.grey),
                         ),
+                        onPressed: () {
+                          setState(() {
+                            _selectedCategory = 'All';
+                            _priceRange = const RangeValues(0, 25000);
+                            _selectedDuration = null;
+                          });
+                          Navigator.pop(context);
+                          _fetchCoursesWithFilter();
+                        },
+                        child: const Text("Clear", style: TextStyle(color: Colors.black)),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 10, // ตำแหน่ง Search Bar กึ่งกลางรอยต่อ
-                    left: 16,
-                    right: 16,
-                    child: _buildSearchBar(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          SliverList(
-            delegate: SliverChildListDelegate(
-              [
-                const SizedBox(height: 10), // เว้นระยะจาก SearchBar
-
-                // 2.2 Category Filter (แบบ Card ใหญ่มีไอคอน)
-                if (_categories.isNotEmpty) ...[
-                  _buildCategoryFilter(),
-                ],
-
-                const SizedBox(height: 20),
-
-                // 2.3 Title "Choice your course"
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Choice your course',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4A68FF),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _fetchCoursesWithFilter();
+                        },
+                        child: const Text("Apply Filter",
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
-                      TextButton(onPressed: (){}, child: const Text("See all"))
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-
-                const SizedBox(height: 10),
-
-                // 2.4 Sort Chips (All, Popular, New)
-                _buildSortFilter(),
-
-                const SizedBox(height: 10),
-
-                // 2.5 Course List Result
-                _buildCourseListResult(),
-
-                const SizedBox(height: 80), // เผื่อพื้นที่ให้ BottomNav
-              ],
-            ),
+              )
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  // --- ปรับปรุง Search Bar ให้โค้งมนและมีเงา ---
-  Widget _buildSearchBar() {
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextField(
-        onChanged: (value) => _searchText = value,
-        onSubmitted: (value) => _fetchCoursesWithFilter(),
-        decoration: InputDecoration(
-          hintText: 'Find Course',
-          hintStyle: TextStyle(color: Colors.grey[400]),
-          prefixIcon: const Icon(Icons.search, color: Colors.grey),
-          suffixIcon: Container(
-            margin: const EdgeInsets.all(5),
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFFEEEEEE),
-            ),
-            child: const Icon(Icons.tune, color: Colors.grey, size: 20),
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );
   }
 
-  // --- ปรับปรุง Category Filter ให้เหมือนในรูป (Card สี่เหลี่ยมมีไอคอน) ---
-  Widget _buildCategoryFilter() {
-    return SizedBox(
-      height: 110, // เพิ่มความสูงให้ใส่ไอคอนได้
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        scrollDirection: Axis.horizontal,
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final category = _categories[index];
-          final isSelected = category == _selectedCategory;
-
-          // กำหนดสีและไอคอนตามหมวดหมู่ (Custom Style)
-          Color cardColor;
-          Color contentColor;
-          IconData iconData;
-
-          if (category == 'Maths') {
-            cardColor = const Color(0xFFE3F2FD); // ฟ้าอ่อน
-            contentColor = const Color(0xFF1E88E5); // ฟ้าเข้ม
-            iconData = Icons.calculate_outlined;
-          } else if (category == 'Robotic') {
-            cardColor = const Color(0xFFF3E5F5); // ม่วงอ่อน
-            contentColor = const Color(0xFF8E24AA); // ม่วงเข้ม
-            iconData = Icons.smart_toy_outlined;
-          } else {
-            cardColor = Colors.white;
-            contentColor = Colors.grey.shade700;
-            iconData = Icons.category_outlined;
-          }
-
-          // ถ้าถูกเลือก ให้สีเข้มขึ้นหรือมีขอบ
-          if (isSelected) {
-            cardColor = contentColor.withOpacity(0.1);
-          }
-
-          return GestureDetector(
-            onTap: () {
-              setState(() => _selectedCategory = category);
-              _fetchCoursesWithFilter();
-            },
-            child: Container(
-              width: 100, // ความกว้างของ Card
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: isSelected ? Border.all(color: contentColor, width: 2) : null,
-                boxShadow: [
-                  if (!isSelected)
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2))
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // ไอคอนในวงกลม
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.6),
-                      shape: BoxShape.circle,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFFC107),
+        elevation: 0,
+        title: const Text('Course', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+      ),
+      body: GestureDetector(
+        onTap: () => OnscreenKeyboard.of(context).close(),
+        child: Column(
+          children: [
+            Container(
+              color: const Color(0xFFFFC107),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+              child: _buildSearchBar(),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _fetchCoursesWithFilter,
+                child: ListView(
+                  children: [
+                    const SizedBox(height: 20),
+                    _buildFixedCategories(),
+                    const SizedBox(height: 25),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text("Choice your course", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
-                    child: Icon(iconData, color: contentColor, size: 28),
-                  ),
-                  const SizedBox(height: 8),
-                  // ชื่อหมวดหมู่
-                  Text(
-                    category,
-                    style: TextStyle(
-                      color: contentColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+                    _buildSortTabs(),
+                    _buildCourseList(),
+                  ],
+                ),
               ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
 
-  // --- ปรับปรุง Sort Chips ---
-  Widget _buildSortFilter() {
-    final sortOptions = ['All', 'Popular', 'New'];
+  Widget _buildSearchBar() {
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
+      child: OnscreenKeyboardTextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Find Course',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.tune),
+            onPressed: _showFilterBottomSheet,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 15),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFixedCategories() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        children: sortOptions.map((option) {
-          final isSelected = option == _selectedSort;
+        children: [
+          _categoryCard("Maths", const Color(0xFFE3F2FD), Colors.blue, Icons.calculate),
+          const SizedBox(width: 15),
+          _categoryCard("Robotic", const Color(0xFFF3E5F5), Colors.purple, Icons.smart_toy),
+        ],
+      ),
+    );
+  }
+
+  Widget _categoryCard(String title, Color bg, Color textCol, IconData icon) {
+    bool isSelected = _selectedCategory == title;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          OnscreenKeyboard.of(context).close();
+          setState(() {
+            _selectedCategory = isSelected ? 'All' : title;
+          });
+          _fetchCoursesWithFilter();
+        },
+        child: Container(
+          height: 90,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(15),
+            border: isSelected ? Border.all(color: textCol, width: 2) : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: textCol, size: 30),
+              Text(title, style: TextStyle(color: textCol, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortTabs() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      child: Row(
+        children: ['All', 'Popular', 'New'].map((tab) {
+          bool isSel = _selectedSort == tab;
           return Padding(
-            padding: const EdgeInsets.only(right: 10.0),
+            padding: const EdgeInsets.only(right: 15),
             child: GestureDetector(
               onTap: () {
-                setState(() => _selectedSort = option);
+                OnscreenKeyboard.of(context).close();
+                setState(() => _selectedSort = tab);
                 _fetchCoursesWithFilter();
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.black87 : Colors.white,
+                  color: isSel ? const Color(0xFF4A68FF) : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: Text(
-                  option,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey.shade700,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: Text(tab, style: TextStyle(color: isSel ? Colors.white : Colors.grey)),
               ),
             ),
           );
@@ -335,49 +331,34 @@ class _CoursePageState extends State<CoursePage> {
     );
   }
 
-  // --- ส่วนแสดงรายการ (Loading / Error / List) ---
-  Widget _buildCourseListResult() {
-    if (_isLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(40.0),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (_errorMessage.isNotEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red))),
-      );
-    }
-    if (_allCourses.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(40.0),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(Icons.search_off, size: 60, color: Colors.grey),
-              Text('No courses found', style: TextStyle(color: Colors.grey)),
-            ],
-          ),
-        ),
-      );
-    }
+  Widget _buildCourseList() {
+    if (_isLoading) return const Center(child: Padding(padding: EdgeInsets.all(50), child: CircularProgressIndicator()));
+    if (_allCourses.isEmpty) return const Center(child: Text("No courses found"));
 
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16), // เว้นขอบซ้ายขวา
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _allCourses.length,
       itemBuilder: (context, index) {
-        return CourseCard(course: _allCourses[index]);
+        final course = _allCourses[index];
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CourseDetailPage(course: course),
+              ),
+            );
+          },
+          child: CourseCard(course: course),
+        );
       },
     );
   }
-}
+} // ปิด Class _CoursePageState
 
-// ******************************************************
-// 3. COURSE CARD WIDGET (ปรับปรุงให้สวยงาม)
-// ******************************************************
+// --- คลาส CourseCard แยกออกมาอยู่ด้านนอกให้ถูกต้อง ---
 class CourseCard extends StatelessWidget {
   final CourseModel course;
   const CourseCard({super.key, required this.course});
@@ -385,110 +366,57 @@ class CourseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16), // ระยะห่างระหว่างการ์ด
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [const BoxShadow(color: Colors.black12, blurRadius: 5)],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            // 1. รูปภาพคอร์ส (มุมโค้ง)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: Container(
-                width: 90,
-                height: 90,
-                color: Colors.grey.shade200,
-                child: course.imageUrl != null && course.imageUrl!.isNotEmpty
-                    ? Image.network(
-                  course.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.broken_image, color: Colors.grey),
-                )
-                    : const Icon(Icons.image, color: Colors.grey), // Placeholder
-              ),
+      child: Row(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(10),
+              image: course.imageUrl.isNotEmpty
+                  ? DecorationImage(image: NetworkImage(course.imageUrl), fit: BoxFit.cover)
+                  : null,
             ),
-            const SizedBox(width: 16),
-
-            // 2. รายละเอียดคอร์ส
-            Expanded(
+            child: course.imageUrl.isEmpty ? const Icon(Icons.image, color: Colors.grey) : null,
+          ),
+          const SizedBox(width: 15),
+          Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ชื่อคอร์ส
-                  Text(
-                    course.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-
-                  // ผู้สอน
+                  Text(course.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 5),
+                  Text(course.instructor, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  const SizedBox(height: 8),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(Icons.person_outline, size: 16, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          course.instructor,
-                          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // ราคาและเวลา
-                  Row(
-                    children: [
-                      Text(
-                        '${course.price} Bath',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E88E5), // สีฟ้าเน้นราคา
-                        ),
-                      ),
-                      const Spacer(),
+                      Text("${course.price} Bath",
+                          style: const TextStyle(color: Color(0xFF4A68FF), fontWeight: FontWeight.bold)),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF3E0), // พื้นหลังสีส้มอ่อน
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${course.durationHours} hours',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFE65100), // ตัวหนังสือสีส้มเข้ม
-                          ),
-                        ),
+                            color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(5)),
+                        child: Text("${course.durationHours} hours",
+                            style: const TextStyle(
+                                color: Colors.deepOrange, fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ],
-                  ),
+                  )
                 ],
-              ),
-            ),
-          ],
-        ),
+              ))
+        ],
       ),
     );
   }

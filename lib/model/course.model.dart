@@ -6,12 +6,13 @@ class CourseModel {
   final String description;
   final int totalLessons;
   final String imageUrl;
+  final String videoUrl;
   final bool isHotCourse;
   final String category;
   final String instructor;
   final int price;
   final int durationHours;
-  // final DateTime createdAt; // ตัดออกก่อนเพื่อลดความซับซ้อนของวันที่
+  final String time;
 
   CourseModel({
     required this.id,
@@ -19,33 +20,32 @@ class CourseModel {
     required this.description,
     required this.totalLessons,
     required this.imageUrl,
+    required this.videoUrl,
     required this.isHotCourse,
     required this.category,
     required this.instructor,
     required this.price,
     required this.durationHours,
-    // required this.createdAt,
+    required this.time,
   });
 
   factory CourseModel.fromJson(Map<String, dynamic> json) {
     return CourseModel(
-      id: json['_id']?.toString() ?? '',
-      title: json['title']?.toString() ?? 'No Title',
-      description: json['description']?.toString() ?? '',
+        id: json['_id']?.toString() ?? '',
+        title: json['title']?.toString() ?? 'No Title',
+        description: json['description']?.toString() ?? '',
+        totalLessons: int.tryParse(json['totalLessons'].toString()) ?? 0,
+        imageUrl: json['imageUrl']?.toString() ?? '',
 
-      // การแปลงตัวเลขที่ปลอดภัย (รับได้ทั้ง String และ Int)
-      totalLessons: int.tryParse(json['totalLessons'].toString()) ?? 0,
+        // 3. ดึงค่า videoUrl จาก JSON (ถ้าใน DB ไม่มี ให้ใส่ค่าว่างไว้ก่อน)
+        videoUrl: json['videoUrl']?.toString() ?? '',
 
-      // ถ้าไม่มีรูป ให้ใช้รูป Placeholder
-      imageUrl: json['imageUrl']?.toString() ?? '',
-
-      isHotCourse: json['isHotCourse'] == true,
-
-      // *** จุดที่แก้ Error: ถ้าไม่มีข้อมูล ให้ใส่ค่า Default ***
-      category: json['category']?.toString() ?? 'General',
-      instructor: json['instructor']?.toString() ?? 'Unknown Teacher',
-      price: int.tryParse(json['price'].toString()) ?? 0,
-      durationHours: int.tryParse(json['durationHours'].toString()) ?? 0,
+        isHotCourse: json['isHotCourse'] == true,
+        category: json['category']?.toString() ?? 'General',
+        instructor: json['instructor']?.toString() ?? 'Unknown Teacher',
+        price: int.tryParse(json['price'].toString()) ?? 0,
+        durationHours: int.tryParse(json['durationHours'].toString()) ?? 0,
+        time: json['time']?.toString() ?? ''
     );
   }
 }
