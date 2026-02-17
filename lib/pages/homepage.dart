@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
-
-// Import หน้าอื่นๆ สำหรับ Bottom Navigation Bar
-import 'Account.dart';
 import 'Course.dart';
+import 'Account.dart';
 import 'Message.dart';
 import 'Search.dart';
 
@@ -14,441 +11,426 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Future<Map<String, dynamic>> _futureDashboard;
-  int _selectedIndex = 0; // Index สำหรับ BottomNavigationBar
+  int _selectedIndex = 0;
 
-  // รายการ Widgets/Pages ที่จะใช้ใน Bottom Navigation Bar
-  // สำหรับ Index 0 เราจะใช้ FutureBuilder เพื่อจัดการการดึงข้อมูล
-  final List<Widget> _widgetOptions = <Widget>[
-    Container(), // Placeholder สำหรับ Home, เนื้อหาจะถูกสร้างใน Body
-    const CoursePage(),
-    const SearchPage(),
-    const MessagePage(),
-    const AccountPage(),
+  final List<Widget> _pages = const [
+    _HomeDashboardMock(), // Home UI แบบในภาพ (mock data)
+    CoursePage(),
+    SearchPage(),
+    MessagePage(),
+    AccountPage(),
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _futureDashboard = ApiService.getDashboard();
-  }
-
-  // สร้าง App Bar สำหรับหน้า Home
-  Widget _buildAppBar(String userName) { // รับชื่อผู้ใช้เข้ามา
-    return Container(
-      height: 120 + MediaQuery.of(context).padding.top, // ความสูงรวม Status Bar
-      color: const Color(0xFF004D6D), // สีน้ำเงินเข้ม
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top, left: 16, right: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Hi, $userName", // **ใช้ชื่อที่ดึงมาจาก DB**
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              // Icon Wi-Fi และ Battery (จำลอง) - จริงๆ แล้วควรอยู่เหนือ AppBar
-              // แต่เราจำลองให้อยู่ในพื้นที่นี้ตามดีไซน์
-              Row(
-                children: const [
-                  Icon(Icons.wifi, color: Colors.white),
-                  SizedBox(width: 4),
-                  Icon(Icons.battery_full, color: Colors.white),
-                ],
-              ),
-            ],
-          ),
-          const Text(
-            "Let's start learning",
-            style: TextStyle(fontSize: 18, color: Colors.white70),
-          ),
-        ],
-      ),
-    );
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ไม่มี AppBar ใน Scaffold แล้ว
-      body: Center(
-        child: _selectedIndex == 0
-            ? FutureBuilder<Map<String, dynamic>>(
-          future: _futureDashboard,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}"));
-            } else {
-              final data = snapshot.data!;
-              // ใช้ข้อมูลจาก API หรือค่า Default
-              final user = data["user"] ?? {"name": "User", "learnedToday": 0, "goalMinutes": 0};
-
-              return Column(
-                children: [
-                  // Header ที่ปรับเปลี่ยนให้แสดงชื่อจาก API
-                  _buildAppBar(user['name']),
-                  // เนื้อหาที่เหลือที่เลื่อนได้
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: _HomeContent(data: data),
-                    ),
-                  ),
-                ],
-              );
-            }
-          },
-        )
-            : _widgetOptions.elementAt(_selectedIndex), // แสดงหน้าอื่นๆ
-      ),
-
-      // Bottom Navigation Bar
+      backgroundColor: Colors.white,
+      body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Course'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Message'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-        ],
         currentIndex: _selectedIndex,
-        selectedItemColor: const Color(0xFF004D6D), // สีน้ำเงินเข้ม
+        selectedItemColor: const Color(0xFF004D6D),
         unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.school), label: "Course"),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
+          BottomNavigationBarItem(icon: Icon(Icons.message), label: "Message"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Account"),
+        ],
       ),
     );
   }
 }
 
-// Widget สำหรับเนื้อหาหน้า Home (ไม่มีการเปลี่ยนแปลงในส่วนนี้)
-class _HomeContent extends StatelessWidget {
-  final Map<String, dynamic>? data;
-
-  const _HomeContent({this.data});
+class _HomeDashboardMock extends StatelessWidget {
+  const _HomeDashboardMock();
 
   @override
   Widget build(BuildContext context) {
-    final user = data?["user"] ?? {"name": "User", "learnedToday": 46, "goalMinutes": 60};
-    final hotCourse = data?["hotCourse"];
+    // mock data ให้เหมือนภาพ
+    const userName = "Kristina";
+    const learnedToday = 46;
+    const goalMinutes = 60;
+    final progress = (goalMinutes == 0) ? 0.0 : learnedToday / goalMinutes;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ส่วนสถานะการเรียน (Learned today)
-        _buildLearningStatus(user),
-
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            "Hot Course of the week",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF004D6D)),
+    return SafeArea(
+      child: Stack(
+        children: [
+          // พื้นหลัง header สีฟ้า
+          Container(
+            height: 240,
+            width: double.infinity,
+            color: const Color(0xFF004D6D),
           ),
-        ),
-        _buildHotCourseCard(hotCourse),
 
-        // Calendar Section
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            "Calendar",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-        ),
-        _buildCalendar(),
+          // เนื้อหาเลื่อน
+          SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // header text
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      SizedBox(height: 6),
+                    ],
+                  ),
+                ),
 
-        // Booking Section
-        _buildBookingSection(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Hi, $userName",
+                        style: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        "Let's start learning",
+                        style: TextStyle(fontSize: 16, color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
 
-        // ข้อมูลอื่นๆ ที่มาจาก API เก่า
-        if (data != null) ...[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: Text("📘 Learning Plan (from API)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-          ...List.from(data!["learningPlan"]).map((lp) => ListTile(
-            title: Text(lp["title"]),
-            subtitle: Text("Progress: ${lp["progress"]}"),
-          )),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: Text("📢 Announcement (from API)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: ListTile(
-              leading: Image.network(data!["announcement"]["bannerUrl"]),
-              title: Text(data!["announcement"]["title"]),
-              subtitle: Text(data!["announcement"]["subtitle"]),
+                const SizedBox(height: 18),
+
+                // card "Learned today" ซ้อนทับ header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _LearnedTodayCard(
+                    learnedToday: learnedToday,
+                    goalMinutes: goalMinutes,
+                    progress: progress.clamp(0.0, 1.0),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                // Hot course row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: const [
+                      Expanded(child: _HotCourseCard()),
+                      SizedBox(width: 12),
+                      _SideStatusCard(),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    "Calendar",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: _CalendarCard(),
+                ),
+
+                const SizedBox(height: 18),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: _BookingCard(),
+                ),
+
+                const SizedBox(height: 24),
+              ],
             ),
           ),
-          const SizedBox(height: 30),
         ],
-      ],
+      ),
     );
   }
+}
 
-  // Widgets ย่อย (LearningStatus, HotCourseCard, Calendar, BookingSection)
-  // ... (โค้ดของ Widgets ย่อยเหล่านี้เหมือนเดิมจากคำตอบก่อนหน้า) ...
+class _LearnedTodayCard extends StatelessWidget {
+  final int learnedToday;
+  final int goalMinutes;
+  final double progress;
 
-  Widget _buildLearningStatus(Map<String, dynamic> user) {
-    final learned = user['learnedToday'];
-    final goal = user['goalMinutes'];
-    final progress = learned / goal;
+  const _LearnedTodayCard({
+    required this.learnedToday,
+    required this.goalMinutes,
+    required this.progress,
+  });
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Card(
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
         color: Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: const [
+              Text("Learned today", style: TextStyle(color: Colors.grey)),
+              Spacer(),
+              Text("My courses", style: TextStyle(color: Colors.blue)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text("Learned today", style: TextStyle(color: Colors.grey)),
-                  Text("My courses", style: TextStyle(color: Colors.blue)),
-                ],
+              Text(
+                "${learnedToday}min",
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF004D6D),
+                ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "$learned min",
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF004D6D),
-                    ),
-                  ),
-                  Text("/ $goal min", style: const TextStyle(fontSize: 18, color: Colors.grey)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: progress,
-                backgroundColor: Colors.blue.shade100,
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(4),
+              const SizedBox(width: 8),
+              Text(
+                "/ ${goalMinutes}min",
+                style: const TextStyle(color: Colors.grey),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHotCourseCard(Map<String, dynamic>? hotCourse) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 180,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0F7FA), // สีฟ้าอ่อน
-                borderRadius: BorderRadius.circular(15),
-                image: const DecorationImage(
-                  image: AssetImage('assets/hot_course_illustration.png'),
-                  fit: BoxFit.cover,
-                  alignment: Alignment.centerRight,
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      hotCourse?["title"] ?? "Hot Course of the week",
-                      style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF004D6D)),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text("Start now", style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            height: 180,
-            width: 100,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: const Center(
-              child: Icon(Icons.check_circle, size: 40, color: Colors.green),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.deepOrange),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildCalendar() {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Icon(Icons.arrow_back_ios, color: Colors.grey, size: 16),
-                const Text(
-                  "April, 2025",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: const [
-                Text("Mo"),
-                Text("Tu"),
-                Text("We"),
-                Text("Th"),
-                Text("Fr"),
-                Text("Sa"),
-                Text("Su"),
-              ],
-            ),
-            const Divider(),
-            _buildDateRow([29, 30, 31, 1, 2, 3, 4], -1),
-            _buildDateRow([5, 6, 7, 8, 9, 10, 11], 7),
-          ],
-        ),
+class _HotCourseCard extends StatelessWidget {
+  const _HotCourseCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 170,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD6F0FF),
+        borderRadius: BorderRadius.circular(18),
       ),
-    );
-  }
-
-  Widget _buildDateRow(List<int> dates, int selectedDate) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: dates.map((date) {
-          final isSelected = date == selectedDate;
-          final isFaded = date > 20 && date < 32;
-
-          return Container(
-            width: 35,
-            height: 35,
-            decoration: isSelected
-                ? BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.circular(8),
-            )
-                : null,
-            alignment: Alignment.center,
-            child: Text(
-              date.toString(),
-              style: TextStyle(
-                color: isSelected ? Colors.white : (isFaded ? Colors.grey : Colors.black),
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Hot Course\nof the week",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0D2C3A),
             ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildBookingSection() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Container(
-        height: 120,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFC107),
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Row(
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text(
-                "Booking",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF3E2723)),
-              ),
-            ),
-            const Spacer(),
-            Container(
-              width: 100,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/booking_illustration.png'),
-                  fit: BoxFit.contain,
+          ),
+          const Spacer(),
+          SizedBox(
+            height: 42,
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
+              child: const Text("Start now", style: TextStyle(color: Colors.white)),
             ),
-            const SizedBox(width: 16),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
-// ------------------------------------------------------------------
-// Pages Dummy (ไม่มีการเปลี่ยนแปลง)
-// ------------------------------------------------------------------
 
+class _SideStatusCard extends StatelessWidget {
+  const _SideStatusCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 110,
+      height: 170,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Center(
+        child: Icon(Icons.check_circle, size: 44, color: Colors.green),
+      ),
+    );
+  }
+}
+
+class _CalendarCard extends StatelessWidget {
+  const _CalendarCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _circleIcon(Icons.chevron_left),
+              const Spacer(),
+              const Text("April 2025", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              _circleIcon(Icons.chevron_right),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: const [
+              Text("Mo"), Text("Tu"), Text("We"), Text("Th"), Text("Fr"), Text("Sa"), Text("Su"),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _dateRow([29, 30, 31, 1, 2, 3, 4], selected: -1),
+          const SizedBox(height: 8),
+          _dateRow([5, 6, 7, 8, 9, 10, 11], selected: 7),
+        ],
+      ),
+    );
+  }
+
+  static Widget _circleIcon(IconData icon) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: Colors.grey.shade700),
+    );
+  }
+
+  static Widget _dateRow(List<int> dates, {required int selected}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: dates.map((d) {
+        final isSelected = d == selected;
+        final isFaded = d >= 29; // 29-31 ของเดือนก่อน
+        return Container(
+          width: 36,
+          height: 36,
+          decoration: isSelected
+              ? BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(10))
+              : null,
+          alignment: Alignment.center,
+          child: Text(
+            d.toString(),
+            style: TextStyle(
+              color: isSelected ? Colors.white : (isFaded ? Colors.grey : Colors.black),
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _BookingCard extends StatelessWidget {
+  const _BookingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 120,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFC107),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: const [
+          Text(
+            "Booking",
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF3E2723),
+            ),
+          ),
+          Spacer(),
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.white,
+            child: Icon(Icons.people, color: Colors.black),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Dummy pages
 class SearchPage extends StatelessWidget {
   const SearchPage({super.key});
   @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Search Page Content"));
-  }
+  Widget build(BuildContext context) => const Center(child: Text("Search Page Content"));
 }
+
 class MessagePage extends StatelessWidget {
   const MessagePage({super.key});
   @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Message Page Content"));
-  }
+  Widget build(BuildContext context) => const Center(child: Text("Message Page Content"));
 }
+
 class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
   @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Account Page Content"));
-  }
+  Widget build(BuildContext context) => const Center(child: Text("Account Page Content"));
 }

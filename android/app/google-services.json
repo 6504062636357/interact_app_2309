@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "168889136984",
-    "project_id": "interactedu-notify",
-    "storage_bucket": "interactedu-notify.firebasestorage.app"
+    "project_number": "452675499298",
+    "project_id": "interactedu",
+    "storage_bucket": "interactedu.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:168889136984:android:3fd6981804c047d8f2172d",
+        "mobilesdk_app_id": "1:452675499298:android:52b4b8dfdd6a866973617b",
         "android_client_info": {
           "package_name": "com.example.interact_app_2309"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "452675499298-94uc5haakkule326h6ffd0n6j4pa4sci.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyD49nTw8T8UYBqlfxYC7xz8tY1vRbQk7h0"
+          "current_key": "AIzaSyBwdX6XQXMClIYRlYKjzs60AiIH2JOyP74"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "452675499298-94uc5haakkule326h6ffd0n6j4pa4sci.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
