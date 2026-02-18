@@ -1,10 +1,18 @@
-// main.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart'; // import ตัวนี้
-import 'package:interact_app_2309/pages/login_page.dart';
+import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'pages/login_page.dart';
 
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-void main() => runApp(const MyApp());
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -13,9 +21,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      // เพิ่มบรรทัดนี้ เพื่อให้คีย์บอร์ดทำงานได้ครอบคลุมทุกหน้า
       builder: OnscreenKeyboard.builder(
-        theme: OnscreenKeyboardThemeData.gBoard(), // หรือ .gBoard()
+        theme: OnscreenKeyboardThemeData.gBoard(),
       ),
       home: const LoginPage(),
     );

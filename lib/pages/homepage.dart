@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 // Import pages
 import 'Account.dart';
 import 'Course.dart';
+import 'Account.dart';
 import 'Message.dart';
 import 'Search.dart';
 
@@ -227,6 +228,7 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
+}
 
 
   // ---------------- OTHER SECTIONS ----------------
@@ -285,6 +287,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
 
   Widget _buildCalendar() {
     return Card(
@@ -321,9 +324,7 @@ class _HomePageState extends State<HomePage> {
 class MessagePage extends StatelessWidget {
   const MessagePage({super.key});
   @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Message Page Content"));
-  }
+  Widget build(BuildContext context) => const Center(child: Text("Message Page Content"));
 }
 
 class AccountPage extends StatelessWidget {

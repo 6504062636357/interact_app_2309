@@ -6,6 +6,9 @@ import '../services/api_service.dart';
 import 'tabs/myclass_tab.dart';
 import 'tabs/calendar_tab.dart';
 import 'tabs/Booking_tab.dart';
+import '../model/course.model.dart';
+import '../services/api_service.dart';
+import 'CourseDetail.dart';
 
 class CoursePage extends StatefulWidget {
   const CoursePage({super.key});
@@ -25,7 +28,6 @@ class _CoursePageState extends State<CoursePage> {
   String _selectedCategory = 'All';
   String _selectedSort = 'All';
   RangeValues _priceRange = const RangeValues(0, 25000);
-  String? _selectedDuration;
 
   @override
   void initState() {
@@ -60,7 +62,12 @@ class _CoursePageState extends State<CoursePage> {
     try {
       String? categoryParam = (_selectedCategory == 'All') ? null : _selectedCategory;
       String? sortParam = (_selectedSort == 'All') ? null : _selectedSort.toLowerCase();
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
+    try {
       final courseData = await ApiService.getCourses(
         category: categoryParam,
         sort: sortParam,

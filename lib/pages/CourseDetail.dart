@@ -3,16 +3,16 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import '../config.dart';
 import '../model/class_schedule.model.dart';
 import '../model/course.model.dart';
 import '../pages/BookingPage.dart';
 
 import 'dart:convert';
-import '../services/api_service.dart';
 
 class CourseDetailPage extends StatefulWidget {
-  final CourseModel course; // รับข้อมูลคอร์สที่มี videoUrl มาจากหน้าแรก
+  final CourseModel course;
 
   const CourseDetailPage({super.key, required this.course});
 
@@ -34,39 +34,34 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     _futureSchedules = getClassSchedules(widget.course.id);
   }
 
-  // ฟังก์ชันตั้งค่าตัวเล่นวิดีโอตาม URL ของแต่ละวิชา
   void _initVideoPlayer() async {
-    // 1. ตรวจสอบว่ามี URL วิดีโอไหม ถ้าไม่มีให้ใช้ตัวอย่าง (UARO.mp4)
     final String videoSource = widget.course.videoUrl.isNotEmpty
         ? widget.course.videoUrl
         : "https://interactedu.space/UARO.mp4";
 
-    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(videoSource));
+    _videoPlayerController =
+        VideoPlayerController.networkUrl(Uri.parse(videoSource));
 
     try {
       await _videoPlayerController.initialize();
 
-      // 2. ตั้งค่า Chewie (หน้าตา UI วิดีโอ)
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
         aspectRatio: 16 / 9,
-        autoPlay: false, // ให้กดเล่นเอง
+        autoPlay: false,
         looping: false,
-        placeholder: Container(color: Colors.black), // พื้นหลังระหว่างรอโหลด
-        autoInitialize: true,
       );
 
       setState(() {
         _isInitialized = true;
       });
     } catch (e) {
-      print("Error initializing video: $e");
+      debugPrint("Video error: $e");
     }
   }
 
   @override
   void dispose() {
-    // 3. สำคัญมาก: ต้องล้างข้อมูล Controller เมื่อออกจากหน้า
     _videoPlayerController.dispose();
     _chewieController?.dispose();
     super.dispose();
@@ -81,84 +76,110 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     return data.map((e) => ClassSchedule.fromJson(e)).toList();
   }
   // ฟังก์ชันลงทะเบียนเรียน (เหมือนเดิม)
+  // 🔐 ใช้ FirebaseAuth แทน getToken()
   Future<void> _enrollCourse(BuildContext context) async {
-    final String? myToken = await ApiService.getToken();
-    if (myToken == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please login first!")));
-      }
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please login first")),
+      );
       return;
     }
 
-    final url = Uri.parse('${AppConfig.baseUrl}/api/enroll');
     try {
+      final token = await user.getIdToken();
+
       final response = await http.post(
-        url,
+        Uri.parse('${AppConfig.baseUrl}/api/enrollments'),
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer $myToken",
+          "Authorization": "Bearer $token",
         },
-        body: jsonEncode({"course_id": widget.course.id}),
+        body: jsonEncode({
+          "courseId": widget.course.id,
+        }),
       );
 
-      if (response.statusCode == 201 && context.mounted) {
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Success! ${widget.course.title} added to My Class")),
+          SnackBar(content: Text("Enrolled in ${widget.course.title}")),
         );
+      } else {
+        throw Exception(data['message'] ?? "Enrollment failed");
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cannot connect to server")));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
+  }
+
+  void _showPurchaseDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Enroll in Course"),
+        content: Text("Confirm enrollment in '${widget.course.title}'?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => _enrollCourse(context),
+            child: const Text("Confirm"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomButton() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        color: Colors.white,
+        child: SizedBox(
+          height: 55,
+          child: ElevatedButton(
+            onPressed: () => _showPurchaseDialog(context),
+            child: const Text("Buy Now"),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Stack(
         children: [
           CustomScrollView(
             slivers: [
-              // --- 1. ส่วน Header: เปลี่ยนจากรูปเป็น Video Player ---
               SliverToBoxAdapter(
                 child: AspectRatio(
-                  aspectRatio: 16 / 9, // ขนาดวิดีโอมาตรฐาน
-                  child: Container(
-                    color: Colors.black,
-                    child: _isInitialized && _chewieController != null
-                        ? Chewie(controller: _chewieController!)
-                        : const Center(child: CircularProgressIndicator(color: Colors.white)),
-                  ),
+                  aspectRatio: 16 / 9,
+                  child: _isInitialized && _chewieController != null
+                      ? Chewie(controller: _chewieController!)
+                      : const Center(child: CircularProgressIndicator()),
                 ),
               ),
-
-              // --- 2. รายละเอียดเนื้อหา (ใช้ widget.course เพื่อดึงข้อมูล) ---
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+                padding: const EdgeInsets.all(24),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.course.title,
-                            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        Text(
-                          "${widget.course.price} THB",
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4A68FF)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
                     Text(
-                      "${widget.course.time} · ${widget.course.totalLessons} Lessons",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 15, fontWeight: FontWeight.w500),
+                      widget.course.title,
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 30),
                     const Text("About this course", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -183,22 +204,6 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
               ),
             ],
           ),
-
-          // --- 3. ปุ่ม Back (Overlay อยู่ด้านบน) ---
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: CircleAvatar(
-                backgroundColor: Colors.white.withOpacity(0.8),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.black),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ),
-          ),
-
-          // --- 4. ปุ่ม Buy Now (Fixed Bottom) ---
           _buildBottomButton(),
         ],
       ),

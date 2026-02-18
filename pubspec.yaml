@@ -41,8 +41,9 @@ dependencies:
   chewie: ^1.7.1
   table_calendar: ^3.0.9
   # Firebase
-  firebase_core: ^3.0.0
-  firebase_messaging: ^15.0.0
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.0
+  firebase_messaging: ^15.2.9
   flutter_onscreen_keyboard: ^0.4.2
 
 dev_dependencies:
