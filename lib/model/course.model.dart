@@ -13,6 +13,7 @@ class CourseModel {
   final int price;
   final int durationHours;
   final String time;
+  final String instructorId;
 
   CourseModel({
     required this.id,
@@ -27,6 +28,7 @@ class CourseModel {
     required this.price,
     required this.durationHours,
     required this.time,
+    required this.instructorId,
   });
 
   factory CourseModel.fromJson(Map<String, dynamic> json) {
@@ -45,7 +47,8 @@ class CourseModel {
         instructor: json['instructor']?.toString() ?? 'Unknown Teacher',
         price: int.tryParse(json['price'].toString()) ?? 0,
         durationHours: int.tryParse(json['durationHours'].toString()) ?? 0,
-        time: json['time']?.toString() ?? ''
+        time: json['time']?.toString() ?? '',
+        instructorId: json['instructorId']?.toString() ?? ''
     );
   }
 }

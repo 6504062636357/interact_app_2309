@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
-import '../config.dart';
-import '../model/course.model.dart';
 import 'package:http/http.dart' as http;
+
+import '../config.dart';
+import '../model/class_schedule.model.dart';
+import '../model/course.model.dart';
+import '../pages/BookingPage.dart';
+
 import 'dart:convert';
 import '../services/api_service.dart';
 
@@ -17,7 +21,9 @@ class CourseDetailPage extends StatefulWidget {
 }
 
 class _CourseDetailPageState extends State<CourseDetailPage> {
-  late VideoPlayerController _videoPlayerController;
+  late VideoPlayerController _videoPlayerController;//ต้องประกาศตัวแปรที่จะใช้ฟังชันด้วย
+  late Future<List<ClassSchedule>> _futureSchedules;
+
   ChewieController? _chewieController;
   bool _isInitialized = false;
 
@@ -25,6 +31,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
   void initState() {
     super.initState();
     _initVideoPlayer();
+    _futureSchedules = getClassSchedules(widget.course.id);
   }
 
   // ฟังก์ชันตั้งค่าตัวเล่นวิดีโอตาม URL ของแต่ละวิชา
@@ -64,7 +71,15 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     _chewieController?.dispose();
     super.dispose();
   }
+  Future<List<ClassSchedule>> getClassSchedules(String courseId) async {
+    final res = await http.get(
+      Uri.parse('${AppConfig.baseUrl}/api/class-schedules/course/$courseId'), //ชี้ไปที่ที่อยู่ของ api
 
+    );
+
+    final List data = jsonDecode(res.body);
+    return data.map((e) => ClassSchedule.fromJson(e)).toList();
+  }
   // ฟังก์ชันลงทะเบียนเรียน (เหมือนเดิม)
   Future<void> _enrollCourse(BuildContext context) async {
     final String? myToken = await ApiService.getToken();
@@ -154,6 +169,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                     ),
                     const SizedBox(height: 15),
                     Text("Instructor: ${widget.course.instructor}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+
                     const SizedBox(height: 40),
 
                     // รายการบทเรียน
@@ -161,6 +177,9 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                     _buildLessonTile("02", "Course Overview", "10:00 mins", false),
                   ]),
                 ),
+
+
+
               ),
             ],
           ),
@@ -211,7 +230,15 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                     backgroundColor: const Color(0xFF4A68FF),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   ),
-                  onPressed: () => _showPurchaseDialog(context, widget.course.title),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookingPage(course: widget.course),
+                      ),
+                    );
+                  },
+
                   child: const Text("Buy Now", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -244,18 +271,18 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     );
   }
 
-  void _showPurchaseDialog(BuildContext context, String title) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Enroll in Course"),
-        content: Text("Confirm purchase for '$title'?"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(onPressed: () => _enrollCourse(context), child: const Text("Confirm")),
-        ],
-      ),
-    );
-  }
+ // void _showPurchaseDialog(BuildContext context, String title) {
+ //    showDialog(
+ //      context: context,
+ //      builder: (context) => AlertDialog(
+ //        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+ //        title: const Text("Enroll in Course"),
+ //        content: Text("Confirm purchase for '$title'?"),
+ //        actions: [
+ //          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+ //          ElevatedButton(onPressed: () => _enrollCourse(context), child: const Text("Confirm")),
+ //        ],
+ //      ),
+ //    );
+ //  }
 }

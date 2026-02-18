@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
+import '../model/class_schedule.model.dart';
 
 class ApiService {
   // ******************************************************
@@ -124,4 +125,50 @@ class ApiService {
       throw Exception(data['message'] ?? 'Failed to load courses');
     }
   }
+  static Future<List<ClassSchedule>> getClassSchedulesByCourse(String courseId) async {
+    final token = await getToken();
+
+    final res = await http.get(
+      Uri.parse('${AppConfig.baseUrl}/api/class-schedules?courseId=$courseId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    final data = jsonDecode(res.body);
+
+    if (res.statusCode == 200) {
+      return List<ClassSchedule>.from(
+        data.map((e) => ClassSchedule.fromJson(e)),
+      );
+    } else {
+      throw Exception(data['message'] ?? 'Failed to load schedules');
+    }
+  }
+  static Future<void> createBooking({
+    required String courseId,
+    required String scheduleId,
+  }) async {
+    final token = await getToken();
+
+    final res = await http.post(
+      Uri.parse('${AppConfig.baseUrl}/api/bookings'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'courseId': courseId,
+        'scheduleId': scheduleId,
+      }),
+    );
+
+    if (res.statusCode != 201) {
+      final data = jsonDecode(res.body);
+      throw Exception(data['message'] ?? 'Booking failed');
+    }
+  }
+
+
 }
