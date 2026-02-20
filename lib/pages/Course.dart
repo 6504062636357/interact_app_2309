@@ -28,6 +28,9 @@ class _CoursePageState extends State<CoursePage> {
   String _selectedCategory = 'All';
   String _selectedSort = 'All';
   RangeValues _priceRange = const RangeValues(0, 25000);
+  String? _selectedDuration;
+  // เพิ่มบรรทัดนี้เข้าไปครับ
+  String _errorMessage = '';
 
   @override
   void initState() {
@@ -62,12 +65,7 @@ class _CoursePageState extends State<CoursePage> {
     try {
       String? categoryParam = (_selectedCategory == 'All') ? null : _selectedCategory;
       String? sortParam = (_selectedSort == 'All') ? null : _selectedSort.toLowerCase();
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
 
-    try {
       final courseData = await ApiService.getCourses(
         category: categoryParam,
         sort: sortParam,
@@ -95,7 +93,6 @@ class _CoursePageState extends State<CoursePage> {
       debugPrint("API Error: $e");
     }
   }
-
   // --- [ ส่วนของ UI BottomSheet และ UI อื่นๆ คงเดิมตามโค้ดต้นฉบับของคุณ ] ---
   void _showFilterBottomSheet() {
     OnscreenKeyboard.of(context).close();

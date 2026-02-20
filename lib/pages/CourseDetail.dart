@@ -138,24 +138,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
     );
   }
 
-  Widget _buildBottomButton() {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        color: Colors.white,
-        child: SizedBox(
-          height: 55,
-          child: ElevatedButton(
-            onPressed: () => _showPurchaseDialog(context),
-            child: const Text("Buy Now"),
-          ),
-        ),
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {

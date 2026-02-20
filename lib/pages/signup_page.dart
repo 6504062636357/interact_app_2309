@@ -75,9 +75,8 @@ class _SignUpPageState extends State<SignUpPage> {
       );
     } finally {
       setState(() => _loading = false);
-    } 
+    }
   }
-
   @override
   void dispose() {
     _name.dispose();
@@ -111,7 +110,7 @@ class _SignUpPageState extends State<SignUpPage> {
             ElevatedButton(
               onPressed: _loading ? null : _doSignup,
               child: Text(
-                _loading ? "Loading..." : "Create Account",
+                _loading ? "Creating Account..." : "Create Account",
               ),
             ),
           ],

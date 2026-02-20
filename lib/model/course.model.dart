@@ -1,5 +1,3 @@
-// lib/models/course_model.dart
-
 class CourseModel {
   final String id;
   final String title;
@@ -13,7 +11,11 @@ class CourseModel {
   final int price;
   final int durationHours;
   final String time;
-  final String instructorId;
+
+  // ⭐ เพิ่มใหม่
+  final String instructorImage;
+  final double rating;
+  final bool isBookmarked;
 
   CourseModel({
     required this.id,
@@ -28,27 +30,34 @@ class CourseModel {
     required this.price,
     required this.durationHours,
     required this.time,
-    required this.instructorId,
+
+    required this.instructorImage,
+    required this.rating,
+    required this.isBookmarked,
   });
 
   factory CourseModel.fromJson(Map<String, dynamic> json) {
     return CourseModel(
-        id: json['_id']?.toString() ?? '',
-        title: json['title']?.toString() ?? 'No Title',
-        description: json['description']?.toString() ?? '',
-        totalLessons: int.tryParse(json['totalLessons'].toString()) ?? 0,
-        imageUrl: json['imageUrl']?.toString() ?? '',
+      id: json['_id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      totalLessons: int.tryParse(json['totalLessons']?.toString() ?? '0') ?? 0,
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      videoUrl: json['videoUrl']?.toString() ?? '',
+      isHotCourse: json['isHotCourse'] == true,
+      category: json['category']?.toString() ?? '',
+      instructor: json['instructor']?.toString() ?? '',
+      price: int.tryParse(json['price']?.toString() ?? '0') ?? 0,
+      durationHours:
+      int.tryParse(json['durationHours']?.toString() ?? '0') ?? 0,
+      time: json['time']?.toString() ?? '',
 
-        // 3. ดึงค่า videoUrl จาก JSON (ถ้าใน DB ไม่มี ให้ใส่ค่าว่างไว้ก่อน)
-        videoUrl: json['videoUrl']?.toString() ?? '',
+      instructorImage: json['instructorImage']?.toString() ?? '',
+      rating: (json['rating'] is num)
+          ? (json['rating'] as num).toDouble()
+          : 0.0,
+      isBookmarked: json['isBookmarked'] ?? false,
 
-        isHotCourse: json['isHotCourse'] == true,
-        category: json['category']?.toString() ?? 'General',
-        instructor: json['instructor']?.toString() ?? 'Unknown Teacher',
-        price: int.tryParse(json['price'].toString()) ?? 0,
-        durationHours: int.tryParse(json['durationHours'].toString()) ?? 0,
-        time: json['time']?.toString() ?? '',
-        instructorId: json['instructorId']?.toString() ?? ''
     );
   }
 }

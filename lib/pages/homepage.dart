@@ -287,7 +287,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-}
+
 
   Widget _buildCalendar() {
     return Card(
@@ -318,7 +318,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-}
+
 
 // ---------------- DUMMY PAGES ----------------
 class MessagePage extends StatelessWidget {

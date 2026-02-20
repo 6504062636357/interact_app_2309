@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:interact_app_2309/pages/signup_page.dart';
 import 'homepage.dart';
-
+import '../services/api_service.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -18,15 +19,25 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _loading = true);
 
     try {
-      // 🔐 Login ด้วย Firebase
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // 1. Login via Firebase
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _email.text.trim(),
         password: _password.text.trim(),
       );
 
+      // 2. Sync with MongoDB to ensure user data exists
+      final user = credential.user;
+      if (user != null) {
+        await ApiService.syncUserToMongo(
+          uid: user.uid,
+          email: user.email ?? "",
+          name: user.displayName ?? "User",
+        );
+      }
+
       if (!mounted) return;
 
-      // ✅ เข้า Home ทันที (ยังไม่เรียก backend)
+      // 3. Navigate to HomePage
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
@@ -37,32 +48,31 @@ class _LoginPageState extends State<LoginPage> {
 
       switch (e.code) {
         case 'user-not-found':
-          message = "User not found";
-          break;
         case 'wrong-password':
-          message = "Wrong password";
+        case 'invalid-credential':
+          message = "Invalid email or password";
           break;
         case 'invalid-email':
-          message = "Invalid email";
+          message = "Invalid email format";
           break;
-        case 'invalid-credential':
-          message = "Invalid credential";
+        case 'user-disabled':
+          message = "This user has been disabled";
+          break;
+        case 'too-many-requests':
+          message = "Too many attempts. Please try again later";
           break;
         default:
           message = e.message ?? "Authentication error";
       }
 
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
-
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Unexpected error occurred")),
+        const SnackBar(content: Text("An unexpected error occurred")),
       );
     } finally {
       setState(() => _loading = false);
@@ -92,6 +102,25 @@ class _LoginPageState extends State<LoginPage> {
               controller: _password,
               obscureText: true,
               decoration: const InputDecoration(labelText: "Password"),
+            ), const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("Don't have an account?"),
+                TextButton(
+                  onPressed: () {
+                    // เด้งไปหน้า SignupPage
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SignUpPage()),
+                    );
+                  },
+                  child: const Text(
+                    "Sign Up",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -103,6 +132,8 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       ),
+
     );
   }
+
 }
