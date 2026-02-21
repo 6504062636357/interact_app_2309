@@ -23,24 +23,24 @@ class _SignUpPageState extends State<SignUpPage> {
       // สมัครด้วย Firebase
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
-        email: _email.text.trim(),
-        password: _password.text.trim(),
-      );
+            email: _email.text.trim(),
+            password: _password.text.trim(),
+          );
 
       // ตั้งชื่อ
-      await credential.user!
-          .updateDisplayName(_name.text.trim());
+      await credential.user!.updateDisplayName(_name.text.trim());
 
       // Sync กับ backend (สร้าง user + role)
       // await ApiService.syncUser();
 
       if (!mounted) return;
 
+      print("Signup success");
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-
     } on FirebaseAuthException catch (e) {
       String message = "Signup failed";
 
@@ -63,10 +63,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
 
@@ -75,7 +74,7 @@ class _SignUpPageState extends State<SignUpPage> {
       );
     } finally {
       setState(() => _loading = false);
-    } 
+    }
   }
 
   @override
@@ -110,9 +109,7 @@ class _SignUpPageState extends State<SignUpPage> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _loading ? null : _doSignup,
-              child: Text(
-                _loading ? "Loading..." : "Create Account",
-              ),
+              child: Text(_loading ? "Loading..." : "Create Account"),
             ),
           ],
         ),

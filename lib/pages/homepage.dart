@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'Course.dart';
-import 'Account.dart';
+import 'profile_page.dart';
 import 'Message.dart';
 import 'Search.dart';
 
@@ -13,12 +13,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
+  List<Widget> get _pages => const [
     _HomeDashboardMock(), // Home UI แบบในภาพ (mock data)
     CoursePage(),
     SearchPage(),
     MessagePage(),
-    AccountPage(),
+    ProfilePage(),
   ];
 
   void _onItemTapped(int index) {
@@ -429,8 +429,4 @@ class MessagePage extends StatelessWidget {
   Widget build(BuildContext context) => const Center(child: Text("Message Page Content"));
 }
 
-class AccountPage extends StatelessWidget {
-  const AccountPage({super.key});
-  @override
-  Widget build(BuildContext context) => const Center(child: Text("Account Page Content"));
-}
+

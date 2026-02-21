@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:interact_app_2309/services/api_service.dart';
 import 'homepage.dart';
 
 class LoginPage extends StatefulWidget {
@@ -18,20 +19,27 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _loading = true);
 
     try {
-      // 🔐 Login ด้วย Firebase
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _email.text.trim(),
         password: _password.text.trim(),
       );
+      print("✅ Firebase login success");
+
+      // 🔥 Debug จุดสำคัญ
+      print("🔥 Calling syncUser...");
+      await ApiService.syncUser();
+      print("🔥 Sync completed");
+      // 🔥 เอา Firebase ID Token
+      final user = credential.user;
+      final token = await user!.getIdToken();
+      print("FIREBASE TOKEN: $token");
 
       if (!mounted) return;
-
       // ✅ เข้า Home ทันที (ยังไม่เรียก backend)
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-
     } on FirebaseAuthException catch (e) {
       String message = "Login failed";
 
@@ -54,10 +62,9 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
 
@@ -96,9 +103,7 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _loading ? null : _doLogin,
-              child: Text(
-                _loading ? "Loading..." : "Login",
-              ),
+              child: Text(_loading ? "Loading..." : "Login"),
             ),
           ],
         ),
