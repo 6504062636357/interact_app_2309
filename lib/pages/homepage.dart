@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 // Import pages
 import 'Account.dart';
 import 'Course.dart';
-import 'Account.dart';
+import 'profile_page.dart';
 import 'Message.dart';
 import 'Search.dart';
 
@@ -23,7 +23,7 @@ class _HomePageState extends State<HomePage> {
     const CoursePage(),
     const SearchPage(),
     const MessagePage(),
-    const AccountPage(),
+    const ProfilePage(),
   ];
 
   @override
@@ -327,10 +327,10 @@ class MessagePage extends StatelessWidget {
   Widget build(BuildContext context) => const Center(child: Text("Message Page Content"));
 }
 
-class AccountPage extends StatelessWidget {
-  const AccountPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Account Page Content"));
-  }
-}
+// class AccountPage extends StatelessWidget {
+//   const AccountPage({super.key});
+//   @override
+//   Widget build(BuildContext context) {
+//     return const Center(child: Text("Account Page Content"));
+//   }
+// }

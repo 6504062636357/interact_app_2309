@@ -47,7 +47,7 @@ class ApiService {
         Uri.parse('${AppConfig.baseUrl}/api/users/sync'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          "firebaseUid": uid,
+          "firebaseUid": uid.trim(),
           "email": email,
           "name": name,
           "learnedToday": 0,
@@ -163,6 +163,51 @@ class ApiService {
       throw Exception('Booking failed');
     }
   }
+  static Future<Map<String, dynamic>> getMe() async {
+    final token = await _getFirebaseToken();
 
+    if (token == null) {
+      throw Exception("Not logged in");
+    }
 
+    final res = await http.get(
+      Uri.parse('${AppConfig.baseUrl}/api/users/me'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
+    } else {
+      throw Exception("Get profile failed");
+    }
+  }
+  static Future<void> updateMe({
+    String? name,
+    String? phone,
+    String? bio,
+    int? goalMinutes,
+  }) async {
+
+    final token = await _getFirebaseToken();
+
+    final res = await http.patch(
+      Uri.parse('${AppConfig.baseUrl}/api/users/me'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        if (name != null) 'name': name,
+        if (phone != null) 'phone': phone,
+        if (bio != null) 'bio': bio,
+        if (goalMinutes != null) 'goalMinutes': goalMinutes,
+      }),
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception("Update failed");
+    }
+  }
 }

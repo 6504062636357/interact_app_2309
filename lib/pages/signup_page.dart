@@ -28,11 +28,16 @@ class _SignUpPageState extends State<SignUpPage> {
       );
 
       // ตั้งชื่อ
-      await credential.user!
-          .updateDisplayName(_name.text.trim());
+      await credential.user!.updateDisplayName(_name.text.trim());
 
       // Sync กับ backend (สร้าง user + role)
-      // await ApiService.syncUser();
+      if (credential.user != null) {
+        await ApiService.syncUserToMongo(
+          uid: credential.user!.uid,     // ส่ง UID ที่ Firebase เพิ่งสร้างให้
+          email: _email.text.trim(),     // ส่ง Email จากที่พิมพ์ในหน้าจอ
+          name: _name.text.trim(),       // ส่ง Name จากที่พิมพ์ในหน้าจอ
+        );
+      }
 
       if (!mounted) return;
 
