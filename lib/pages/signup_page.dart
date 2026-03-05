@@ -20,66 +20,49 @@ class _SignUpPageState extends State<SignUpPage> {
     setState(() => _loading = true);
 
     try {
-      // สมัครด้วย Firebase
+      // 1. สมัครสมาชิกผ่าน Firebase
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
         email: _email.text.trim(),
-        password: _password.text.trim(),
+        password: _password.text.trim(), // ตรวจสอบว่าต้อง >= 6 ตัวอักษร
       );
 
-      // ตั้งชื่อ
       await credential.user!.updateDisplayName(_name.text.trim());
 
-      // Sync กับ backend (สร้าง user + role)
+      // 2. Sync ข้อมูลกับ MongoDB และ "เก็บค่าที่ส่งกลับมา"
       if (credential.user != null) {
-        await ApiService.syncUserToMongo(
-          uid: credential.user!.uid,     // ส่ง UID ที่ Firebase เพิ่งสร้างให้
-          email: _email.text.trim(),     // ส่ง Email จากที่พิมพ์ในหน้าจอ
-          name: _name.text.trim(),       // ส่ง Name จากที่พิมพ์ในหน้าจอ
+        // ✅ แก้ไข: ต้องกำหนดค่าให้ userData จากผลลัพธ์ของฟังก์ชัน
+        final response = await ApiService.syncUserToMongo(
+          uid: credential.user!.uid,
+          email: _email.text.trim(),
+          name: _name.text.trim(),
         );
+
+        if (!mounted) return;
+
+        if (response != null) {
+          // 3. เปลี่ยนหน้าไปยัง HomePage พร้อมข้อมูล User จริงจาก DB
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => HomePage(userData: response), // ใช้ข้อมูลที่ได้จาก API
+            ),
+          );
+        } else {
+          throw Exception("ไม่สามารถสร้างข้อมูลในฐานข้อมูลได้");
+        }
       }
-
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
-
     } on FirebaseAuthException catch (e) {
-      String message = "Signup failed";
+      // จัดการ Error จาก Firebase (เช่น weak-password)
+      String message = e.code == 'weak-password'
+          ? "Password must be at least 6 characters"
+          : e.message ?? "Signup failed";
 
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = "Email already in use";
-          break;
-        case 'invalid-email':
-          message = "Invalid email format";
-          break;
-        case 'weak-password':
-          message = "Password is too weak";
-          break;
-        case 'operation-not-allowed':
-          message = "Email/Password sign-in not enabled";
-          break;
-        default:
-          message = e.message ?? "Authentication error";
-      }
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Unexpected error occurred")),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:interact_app_2309/pages/signup_page.dart';
 import 'homepage.dart';
+import 'TeacherDashBoard.dart';
 import '../services/api_service.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,30 +20,52 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _loading = true);
 
     try {
-      // 1. Login via Firebase
+      // 1. Login ผ่าน Firebase Authentication
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _email.text.trim(),
         password: _password.text.trim(),
       );
 
-      // 2. Sync with MongoDB to ensure user data exists
       final user = credential.user;
+
       if (user != null) {
-        await ApiService.syncUserToMongo(
+        // 2. Sync ข้อมูลกับ MongoDB และดึงข้อมูล User (ที่มีฟิลด์ name และ role)
+        final userData = await ApiService.syncUserToMongo(
           uid: user.uid,
           email: user.email ?? "",
           name: user.displayName ?? "User",
         );
+
+        if (!mounted) return;
+
+        // 3. ตรวจสอบว่าได้ข้อมูลจาก MongoDB มาจริงหรือไม่ เพื่อป้องกันหน้าจอแดง (Null Error)
+        if (userData != null) {
+          String role = userData['role'] ?? 'student';
+
+          if (role == 'teacher') {
+            // ส่ง userData ไปที่ TeacherDashboard เพื่อแสดงชื่อ "c21"
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TeacherDashboard(userData: userData),
+              ),
+            );
+          } else {
+            // ส่ง userData ไปที่ HomePage สำหรับนักเรียน
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => HomePage(userData: userData),
+              ),
+            );
+          }
+        } else {
+          // กรณีดึงข้อมูลจาก MongoDB ไม่สำเร็จ
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("ไม่สามารถดึงข้อมูลผู้ใช้จากระบบได้")),
+          );
+        }
       }
-
-      if (!mounted) return;
-
-      // 3. Navigate to HomePage
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
-
     } on FirebaseAuthException catch (e) {
       String message = "Login failed";
 

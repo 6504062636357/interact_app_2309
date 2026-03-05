@@ -35,16 +35,17 @@ class ApiService {
     return prefs.getString("token");
   }
 
-  static Future<void> syncUserToMongo({
+  static Future<Map<String, dynamic>?> syncUserToMongo({
     required String uid,
     required String email,
     required String name,
   }) async {
     try {
-      print("--- [API DEBUG] กำลังส่ง POST ไปที่: ${AppConfig.baseUrl}/api/users/sync");
+      final url = Uri.parse('${AppConfig.baseUrl}/api/users/sync');
+      print("--- [API DEBUG] Syncing to: $url");
 
       final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}/api/users/sync'),
+        url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "firebaseUid": uid.trim(),
@@ -55,16 +56,21 @@ class ApiService {
         }),
       );
 
-      print("--- [API DEBUG] Server Response Status: ${response.statusCode}");
-      print("--- [API DEBUG] Server Response Body: ${response.body}");
+      print("--- [API DEBUG] Status: ${response.statusCode}");
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        print("--- [API DEBUG] MongoDB Sync SUCCESS! ---");
+        final decodedData = jsonDecode(response.body);
+        print("--- [API DEBUG] MongoDB Sync SUCCESS! Data: $decodedData");
+
+        // ส่งข้อมูลทั้งหมดที่ได้จาก Server (รวมถึง role) กลับไป
+        return decodedData;
       } else {
-        print("--- [API DEBUG] MongoDB Sync FAILED! (ตรวจสอบเส้นทาง API หรือโค้ด Node.js) ---");
+        print("--- [API DEBUG] FAILED: ${response.body}");
+        return null;
       }
     } catch (e) {
-      print("--- [API DEBUG] Connection Error: $e (ตรวจสอบว่า Server รันอยู่หรือไม่ หรือ IP ถูกต้องไหม) ---");
+      print("--- [API DEBUG] Connection Error: $e");
+      return null;
     }
   }
   static Future<Map<String, dynamic>> getDashboard() async {
@@ -139,28 +145,23 @@ class ApiService {
       throw Exception(data['message'] ?? 'Failed to load schedules');
     }
   }
-  static Future<void> createBooking({
-    required String courseId,
-    required String scheduleId,
-  }) async {
-    // ดึง UID จาก Firebase ปัจจุบัน
-    final user = FirebaseAuth.instance.currentUser;
-    final uid = user?.uid;
+  // ค้นหาฟังก์ชัน createBooking เดิมใน ApiService แล้วเปลี่ยนเป็นแบบนี้ครับ:
+  static Future<Map<String, dynamic>> createBooking(Map<String, dynamic> data) async {
+    try {
+      final res = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/api/bookings'), // ยิงไปที่ Path ที่เราแก้ใน server.js
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(data), // ส่งก้อน data ที่รับมาจาก Flutter ทั้งหมด
+      );
 
-    if (uid == null) throw Exception('Please login before booking');
-
-    final res = await http.post(
-      Uri.parse('${AppConfig.baseUrl}/api/bookings'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'firebaseUid': uid, // ส่ง UID นี้ไปแทนที่จะส่งเลข ID สุ่มๆ
-        'courseId': courseId,
-        'scheduleId': scheduleId,
-      }),
-    );
-
-    if (res.statusCode != 201) {
-      throw Exception('Booking failed');
+      if (res.statusCode == 201 || res.statusCode == 200) {
+        return jsonDecode(res.body);
+      } else {
+        final errorData = jsonDecode(res.body);
+        throw Exception(errorData['error'] ?? 'Booking failed');
+      }
+    } catch (e) {
+      throw Exception('Error: $e');
     }
   }
   static Future<Map<String, dynamic>> getMe() async {
@@ -210,4 +211,117 @@ class ApiService {
       throw Exception("Update failed");
     }
   }
+
+  // ฟังก์ชันสำหรับส่งวันว่างใหม่ไปที่ MongoDB
+  static Future<bool> saveAvailability(String instructorId, DateTime date, List<String> slots) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/api/availability'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "instructorId": instructorId,
+          "date": date.toIso8601String(),
+          "slots": slots.map((s) => {"time": s, "isBooked": false}).toList(),
+        }),
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      print("Error saving availability: $e");
+      return false;
+    }
+
+  }
+
+  static Future<List<dynamic>> getAvailability(String instructorId) async {
+    try {
+      // ดึงข้อมูลวันว่างโดยใช้ instructorId (เช่น 6996b219...)
+      final response = await http.get(
+        Uri.parse('${AppConfig.baseUrl}/api/availability/$instructorId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        // คืนค่าเป็น List ของข้อมูลวันว่างที่มี slots อยู่ข้างใน
+        return jsonDecode(response.body);
+      } else {
+        print("--- [API DEBUG] Load Failed: ${response.body}");
+        return [];
+      }
+    } catch (e) {
+      print("--- [API DEBUG] Connection Error: $e");
+      return [];
+    }
+  }
+
+// เพิ่มในไฟล์ lib/services/api_service.dart
+
+  static Future<Map<String, dynamic>> saveTeacherAvailability(Map<String, dynamic> data) async {
+    try {
+      // กำหนด URL สำหรับบันทึกข้อมูล (ปรับเปลี่ยนตาม IP/Domain ของ Backend คุณ)
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/teacher-availability'), // ตรวจสอบ endpoint นี้กับ backend อีกครั้ง
+        headers: {
+          'Content-Type': 'application/json', // ต้องระบุว่าเป็น JSON เสมอ
+        },
+        body: jsonEncode(data), // แปลง Map เป็น JSON string ก่อนส่ง
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // หากบันทึกสำเร็จ (200 OK หรือ 201 Created)
+        return jsonDecode(response.body);
+      } else {
+        // หากเกิด error จากฝั่ง Server
+        throw Exception('Failed to save availability: ${response.body}');
+      }
+    } catch (e) {
+      // กรณีที่เชื่อมต่อ Server ไม่ได้
+      throw Exception('Error connecting to server: $e');
+    }
+  }
+// ฟังก์ชันสำหรับดึงรายชื่อผู้สอนทั้งหมดจาก Database
+
+  static Future<Map<String, dynamic>?> getInstructorByName(String name) async {
+    try {
+      final res = await http.get(
+        Uri.parse('${AppConfig.baseUrl}/api/instructors/search?name=$name'),
+      );
+      // ตรวจสอบทั้ง Status 200 และ Body ต้องไม่ว่าง
+      if (res.statusCode == 200 && res.body.isNotEmpty) {
+        return jsonDecode(res.body);
+      }
+      return null; // ถ้าไม่เจอ (404) หรือ Error ให้ส่ง null กลับไป
+    } catch (e) {
+      print("Error getInstructorByName: $e");
+      return null;
+    }
+  }
+
+  // ฟังชัน อัพเดตสถานะการจองโดยการกดยืนยันจากครูแล้วค่อยไปจ่ายเงิน
+  static Future<List<dynamic>> getTeacherBookings(String instructorId) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/bookings/teacher/$instructorId');
+    print("--- [Flutter Log] Requesting API: $url");
+
+    final res = await http.get(url);
+
+    if (res.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(res.body);
+      print("--- [Flutter Log] Received Data: $data"); // เช็คตรงนี้ว่ามี student_name ไหม
+      return data;
+    } else {
+      print("--- [Flutter Log] Error Status: ${res.statusCode}");
+      throw Exception("Failed to load bookings");
+    }
+  }
+
+  static Future<void> updateBookingStatus(String bookingId, String status) async {
+    final res = await http.patch(
+      Uri.parse('${AppConfig.baseUrl}/api/bookings/$bookingId/status'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'status': status}),
+    );
+    if (res.statusCode != 200) throw Exception("Failed to update status");
+  }
+
+
 }
+

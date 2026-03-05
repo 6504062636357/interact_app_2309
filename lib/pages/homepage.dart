@@ -5,11 +5,14 @@ import '../services/api_service.dart';
 import 'Account.dart';
 import 'Course.dart';
 import 'profile_page.dart';
-import 'Message.dart';
-import 'Search.dart';
+import 'Message.dart'; // คงไว้ตามเดิม
+import 'MainBookingPage.dart'; // เพิ่มการ Import หน้า Booking
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final Map<String, dynamic> userData;
+
+  const HomePage({super.key, required this.userData});
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -18,12 +21,13 @@ class _HomePageState extends State<HomePage> {
   late Future<Map<String, dynamic>> _futureDashboard;
   int _selectedIndex = 0;
 
+  // เปลี่ยนจาก SearchPage เป็น MainBookingPage
   final List<Widget> _widgetOptions = <Widget>[
-    Container(),
-    const CoursePage(),
-    const SearchPage(),
-    const MessagePage(),
-    const ProfilePage(),
+    Container(), // หน้า Home หลัก (Index 0)
+    const CoursePage(), // Index 1
+    const MainBookingPage(), // Index 2: หน้า Booking ใหม่
+    const MessagePage(), // Index 3: คง Message ไว้ตามเดิม
+    const ProfilePage(), // Index 4
   ];
 
   @override
@@ -36,7 +40,7 @@ class _HomePageState extends State<HomePage> {
     setState(() => _selectedIndex = index);
   }
 
-  // ---------------- HEADER ----------------
+  // ---------------- HEADER (คงเดิม) ----------------
   Widget _buildHeader(String userName) {
     return Container(
       height: 220,
@@ -69,7 +73,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ---------------- LEARN TODAY CARD ----------------
+  // ---------------- LEARN TODAY CARD (คงเดิม) ----------------
   Widget _buildLearningStatus(Map<String, dynamic> user) {
     final learned = user['learnedToday'];
     final goal = user['goalMinutes'];
@@ -125,7 +129,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,10 +153,7 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // HEADER
                   _buildHeader(user['name']),
-
-                  // CARD (ขยับขึ้นให้เหมือนลอย)
                   Transform.translate(
                     offset: const Offset(0, -40),
                     child: Padding(
@@ -161,10 +161,7 @@ class _HomePageState extends State<HomePage> {
                       child: _buildLearningStatus(user),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // BODY
                   _buildHomeBody(data),
                 ],
               ),
@@ -174,23 +171,53 @@ class _HomePageState extends State<HomePage> {
       )
           : _widgetOptions[_selectedIndex],
 
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF004D6D),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Course'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Message'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+          boxShadow: [
+            BoxShadow(color: Colors.black12, spreadRadius: 0, blurRadius: 10),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          selectedItemColor: const Color(0xFF004D6D),
+          unselectedItemColor: Colors.blueGrey.shade300,
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          items: [
+            const BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+            const BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Course'),
+            BottomNavigationBarItem(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _selectedIndex == 2 ? const Color(0xFFE9F2F5) : Colors.transparent,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.calendar_today_outlined,
+                  color: _selectedIndex == 2 ? const Color(0xFF004D6D) : Colors.blueGrey.shade300,
+                ),
+              ),
+              label: 'Booking',
+            ),
+            const BottomNavigationBarItem(icon: Icon(Icons.messenger_outline), label: 'Message'),
+            const BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Account'),
+          ],
+        ),
       ),
     );
   }
-// ---------------- BODY ----------------
+
+  // ---------------- BODY (คงเดิม) ----------------
   Widget _buildHomeBody(Map<String, dynamic>? data) {
     final hotCourse = data?["hotCourse"];
 
@@ -198,7 +225,6 @@ class _HomePageState extends State<HomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -210,9 +236,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-
         _buildHotCourseCard(hotCourse),
-
         const Padding(
           padding: EdgeInsets.all(16),
           child: Text(
@@ -220,18 +244,14 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
         ),
-
         _buildCalendar(),
         _buildBookingSection(),
-
         const SizedBox(height: 40),
       ],
     );
   }
-}
 
-
-  // ---------------- OTHER SECTIONS ----------------
+  // ... (ฟังก์ชันอื่นๆ _buildHotCourseCard, _buildCalendar, _buildBookingSection คงไว้ตามเดิม)
   Widget _buildHotCourseCard(Map<String, dynamic>? hotCourse) {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -265,7 +285,7 @@ class _HomePageState extends State<HomePage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Text("Start now"),
+                    child: const Text("Start now", style: TextStyle(color: Colors.white),),
                   ),
                 ],
               ),
@@ -287,7 +307,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
 
   Widget _buildCalendar() {
     return Card(
@@ -318,19 +337,5 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-
-// ---------------- DUMMY PAGES ----------------
-class MessagePage extends StatelessWidget {
-  const MessagePage({super.key});
-  @override
-  Widget build(BuildContext context) => const Center(child: Text("Message Page Content"));
 }
 
-// class AccountPage extends StatelessWidget {
-//   const AccountPage({super.key});
-//   @override
-//   Widget build(BuildContext context) {
-//     return const Center(child: Text("Account Page Content"));
-//   }
-// }
