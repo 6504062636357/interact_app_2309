@@ -8,7 +8,7 @@ import 'tabs/calendar_tab.dart';
 import 'tabs/Booking_tab.dart';
 import '../model/course.model.dart';
 import '../services/api_service.dart';
-import 'CourseDetail.dart';
+import '../CourseDetail.dart';
 
 class CoursePage extends StatefulWidget {
   const CoursePage({super.key});
