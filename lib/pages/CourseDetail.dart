@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:interact_app_2309/pages/PaymentPage.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:http/http.dart' as http;
@@ -104,7 +105,6 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
-        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Enrolled in ${widget.course.title}")),
         );
@@ -222,7 +222,7 @@ class _CourseDetailPageState extends State<CourseDetailPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => BookingPage(course: widget.course),
+                        builder: (_) => PaymentPage(course: widget.course),
                       ),
                     );
                   },

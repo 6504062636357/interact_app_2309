@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../model/course.model.dart';
+import '../CourseDetail.dart';
 
 class MyClassTab extends StatelessWidget {
   final List<CourseModel> courses;
@@ -9,7 +10,9 @@ class MyClassTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (courses.isEmpty) {
-      return const Center(child: Text("No courses found", style: TextStyle(color: Colors.grey)));
+      return const Center(
+        child: Text("No courses found", style: TextStyle(color: Colors.grey)),
+      );
     }
 
     return ListView.builder(
@@ -17,11 +20,22 @@ class MyClassTab extends StatelessWidget {
       itemCount: courses.length,
       itemBuilder: (context, index) {
         final course = courses[index];
-        return CourseCard(
-          title: course.title,
-          teacher: course.instructor,
-          hour: course.durationHours,
-          imageUrl: course.imageUrl,
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CourseDetailPage(course: course),
+              ),
+            );
+          },
+          child: CourseCard(
+            title: course.title,
+            teacher: course.instructor,
+            hour: course.durationHours,
+            imageUrl: course.imageUrl,
+          ),
         );
       },
     );
@@ -61,7 +75,10 @@ class CourseCard extends StatelessWidget {
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(12),
               image: imageUrl.isNotEmpty
-                  ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                  ? DecorationImage(
+                      image: NetworkImage(imageUrl),
+                      fit: BoxFit.cover,
+                    )
                   : null,
             ),
           ),
@@ -70,8 +87,14 @@ class CourseCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(teacher, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  teacher,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
                   value: (hour / 20).clamp(0.0, 1.0),
@@ -80,7 +103,7 @@ class CourseCard extends StatelessWidget {
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
