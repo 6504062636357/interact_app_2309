@@ -18,7 +18,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Future<Map<String, dynamic>> _futureDashboard;
+  //late Future<Map<String, dynamic>> _futureDashboard;
+  Future<Map<String, dynamic>>? _futureDashboard;
   int _selectedIndex = 0;
 
   // เปลี่ยนจาก SearchPage เป็น MainBookingPage
@@ -26,14 +27,24 @@ class _HomePageState extends State<HomePage> {
     Container(), // หน้า Home หลัก (Index 0)
     const CoursePage(), // Index 1
     const MainBookingPage(), // Index 2: หน้า Booking ใหม่
-    const MessagePage(), // Index 3: คง Message ไว้ตามเดิม
+    MessagePage(), // Index 3: คง Message ไว้ตามเดิม
     const ProfilePage(), // Index 4
   ];
 
   @override
+  // void initState() {
+  //   super.initState();
+  //   _futureDashboard = ApiService.getDashboard();
+  // }
+  @override
   void initState() {
     super.initState();
-    _futureDashboard = ApiService.getDashboard();
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      setState(() {
+        _futureDashboard = ApiService.getDashboard();
+      });
+    });
   }
 
   void _onItemTapped(int index) {
@@ -134,7 +145,8 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: _selectedIndex == 0
           ? FutureBuilder<Map<String, dynamic>>(
-        future: _futureDashboard,
+      //  future: _futureDashboard,
+        future: _futureDashboard ?? ApiService.getDashboard(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

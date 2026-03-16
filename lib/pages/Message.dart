@@ -1,142 +1,390 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'chat_screen.dart';
 
-class MessagePage extends StatelessWidget {
+class MessagePage extends StatefulWidget {
   const MessagePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF004D6D), // พื้นหลังสีน้ำเงินเข้มให้เข้ากับธีมหลัก
-      body: SafeArea(
-        child: Column(
-          children: [
-            // --- Header ส่วนหัวของหน้า Message ---
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Messages",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_note, color: Colors.white, size: 30),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-            ),
+  State<MessagePage> createState() => _MessagePageState();
+}
 
-            // --- ส่วนรายการข้อความ (พื้นหลังขาวขอบมน) ---
-            Expanded(
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
+class _MessagePageState extends State<MessagePage> {
+
+  String get currentUserId =>
+      FirebaseAuth.instance.currentUser!.uid;
+
+  bool isNotiTab = true;
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Scaffold(
+
+      backgroundColor: const Color(0xFFFFD700),
+
+      appBar: AppBar(
+        title: const Text(
+          "Notification",
+          style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        actions: [
+
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1,
+                color: Colors.black),
+            onPressed: () => _searchAndStartChat(context),
+          )
+
+        ],
+      ),
+
+      body: Column(
+        children: [
+
+          _buildTabs(),
+
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(30)),
+              ),
+              child: isNotiTab
+                  ? _buildChatList()
+                  : const Center(
+                  child: Text("No message content")),
+            ),
+          ),
+
+        ],
+      ),
+    );
+  }
+
+  /// TAB
+  Widget _buildTabs() {
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 15),
+
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+
+          GestureDetector(
+            onTap: () => setState(() => isNotiTab = true),
+            child: _buildTabItem("notification",
+                isActive: isNotiTab),
+          ),
+
+          const SizedBox(width: 40),
+
+          GestureDetector(
+            onTap: () => setState(() => isNotiTab = false),
+            child: _buildTabItem("message",
+                isActive: !isNotiTab),
+          ),
+
+        ],
+      ),
+    );
+  }
+
+  /// CHAT LIST
+  Widget _buildChatList() {
+
+    return StreamBuilder<QuerySnapshot>(
+
+      stream: FirebaseFirestore.instance
+          .collection('chat_rooms')
+          .where('participants',
+          arrayContains: currentUserId)
+          .orderBy('updatedAt', descending: true)
+          .snapshots(),
+
+      builder: (context, snapshot) {
+
+        if (!snapshot.hasData) {
+          return const Center(
+              child: CircularProgressIndicator());
+        }
+
+        var docs = snapshot.data!.docs;
+
+        if (docs.isEmpty) {
+          return const Center(
+              child: Text("No conversations found"));
+        }
+
+        return ListView.builder(
+
+          padding: const EdgeInsets.all(20),
+
+          itemCount: docs.length,
+
+          itemBuilder: (context, index) {
+
+            var room =
+            docs[index].data() as Map<String, dynamic>;
+
+            String roomId = docs[index].id;
+
+            List participants =
+                room['participants'] ?? [];
+
+            String otherUserId =
+            participants.firstWhere(
+                  (id) => id != currentUserId,
+              orElse: () => "",
+            );
+
+            if (otherUserId.isEmpty) {
+              return const SizedBox();
+            }
+
+            return FutureBuilder<DocumentSnapshot>(
+
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(otherUserId)
+                  .get(),
+
+              builder: (context, userSnap) {
+
+                String name = "Loading...";
+
+                if (userSnap.hasData &&
+                    userSnap.data!.exists) {
+
+                  var userData =
+                  userSnap.data!.data()
+                  as Map<String, dynamic>;
+
+                  name =
+                      userData['displayName'] ?? "No Name";
+                }
+
+                Timestamp? time =
+                room['updatedAt'] is Timestamp
+                    ? room['updatedAt']
+                    : null;
+
+                return _buildChatTile(
+                    context,
+                    roomId,
+                    name,
+                    room['lastMessage'] ?? "",
+                    time);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// SEARCH USER
+  void _searchAndStartChat(BuildContext context) async {
+
+    TextEditingController searchCtrl =
+    TextEditingController();
+
+    var myDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .get();
+
+    String myRole = myDoc['role'];
+
+    String targetRole =
+    myRole == "student" ? "teacher" : "student";
+
+    showDialog(
+
+      context: context,
+
+      builder: (context) => AlertDialog(
+
+        title: const Text("Start New Chat"),
+
+        content: TextField(
+          controller: searchCtrl,
+          decoration:
+          const InputDecoration(hintText: "Enter name"),
+        ),
+
+        actions: [
+
+          TextButton(
+
+            child: const Text("Chat"),
+
+            onPressed: () async {
+
+              String targetName =
+              searchCtrl.text.trim();
+
+              var query = await FirebaseFirestore
+                  .instance
+                  .collection('users')
+                  .where('displayName',
+                  isEqualTo: targetName)
+                  .where('role',
+                  isEqualTo: targetRole)
+                  .get();
+
+              if (query.docs.isEmpty) {
+
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(
+                  const SnackBar(
+                      content: Text("User not found")),
+                );
+
+                return;
+              }
+
+              String targetUid =
+                  query.docs.first.id;
+
+              if (targetUid == currentUserId) return;
+
+              List<String> ids = [
+                currentUserId,
+                targetUid
+              ]..sort();
+
+              String roomId = ids.join("_");
+
+              await FirebaseFirestore.instance
+                  .collection('chat_rooms')
+                  .doc(roomId)
+                  .set({
+
+                'participants': ids,
+                'updatedAt':
+                FieldValue.serverTimestamp(),
+                'lastMessage': '',
+
+              }, SetOptions(merge: true));
+
+              Navigator.pop(context);
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChatScreen(
+                    roomId: roomId,
+                    partnerName: targetName,
                   ),
                 ),
-                child: ListView(
-                  padding: const EdgeInsets.only(top: 20),
-                  children: [
-                    _buildChatTile(
-                      name: "Teacher Anne",
-                      message: "อย่าลืมเข้าเรียนวิชา English วันนี้นะคะ!",
-                      time: "10:30 AM",
-                      unreadCount: 2,
-                      avatarColor: Colors.pink.shade100,
-                    ),
-                    _buildChatTile(
-                      name: "Dr. Galaxy",
-                      message: "โปรเจกต์ Space Exploration ยอดเยี่ยมมากครับ",
-                      time: "Yesterday",
-                      unreadCount: 0,
-                      avatarColor: Colors.deepPurple.shade100,
-                    ),
-                    _buildChatTile(
-                      name: "System Support",
-                      message: "คุณได้ทำการจองคอร์ส Robotics สำเร็จแล้ว",
-                      time: "2 Mar",
-                      unreadCount: 0,
-                      avatarColor: Colors.blueGrey.shade100,
-                    ),
-                    _buildChatTile(
-                      name: "Nguyen Shane",
-                      message: "เอกสารประกอบการเรียน Java อยู่ในกลุ่มนะครับ",
-                      time: "1 Mar",
-                      unreadCount: 5,
-                      avatarColor: Colors.orange.shade100,
-                    ),
-                  ],
+              );
+            },
+          )
+
+        ],
+      ),
+    );
+  }
+
+  /// CHAT TILE
+  Widget _buildChatTile(
+      BuildContext context,
+      String roomId,
+      String name,
+      String lastMsg,
+      Timestamp? time) {
+
+    return Container(
+
+      margin: const EdgeInsets.only(bottom: 15),
+
+      padding: const EdgeInsets.all(12),
+
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: const [
+          BoxShadow(
+              color: Colors.black12,
+              blurRadius: 5)
+        ],
+      ),
+
+      child: ListTile(
+
+        leading:
+        const CircleAvatar(child: Icon(Icons.person)),
+
+        title: Text(name,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold)),
+
+        subtitle: Text(lastMsg,
+            maxLines: 1),
+
+        trailing: ElevatedButton(
+
+          onPressed: () {
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChatScreen(
+                  roomId: roomId,
+                  partnerName: name,
                 ),
               ),
-            ),
-          ],
+            );
+          },
+
+          style: ElevatedButton.styleFrom(
+              backgroundColor:
+              const Color(0xFF0D4761)),
+
+          child: const Text(
+            "View",
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 10),
+          ),
         ),
       ),
     );
   }
 
-  // Widget สำหรับสร้างแถบข้อความแต่ละคน
-  Widget _buildChatTile({
-    required String name,
-    required String message,
-    required String time,
-    required int unreadCount,
-    required Color avatarColor,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      leading: CircleAvatar(
-        radius: 28,
-        backgroundColor: avatarColor,
-        child: Text(
-          name[0], // ดึงตัวอักษรแรกมาทำเป็น Avatar
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black54),
-        ),
-      ),
-      title: Text(
-        name,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      ),
-      subtitle: Text(
-        message,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: Colors.grey.shade600),
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            time,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+  Widget _buildTabItem(
+      String label,
+      {required bool isActive}) {
+
+    return Column(
+      children: [
+
+        Text(label,
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: isActive
+                    ? FontWeight.bold
+                    : FontWeight.normal)),
+
+        if (isActive)
+          Container(
+            margin:
+            const EdgeInsets.only(top: 4),
+            height: 2,
+            width: 30,
+            color: Colors.black,
           ),
-          const SizedBox(height: 5),
-          if (unreadCount > 0)
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(
-                color: Colors.orange, // สีส้มตามธีมแอป
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                unreadCount.toString(),
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-              ),
-            ),
-        ],
-      ),
-      onTap: () {
-        // จัดการเมื่อกดที่แชท
-      },
+      ],
     );
   }
 }

@@ -7,7 +7,7 @@ import 'TeacherRequestBooking.dart';
 import 'TeacherGradeBook.dart';
 import 'TeacherProgress.dart';
 import 'TeacherAccount.dart';
-
+import 'TeacherMessagePage.dart';
 class TeacherDashboard extends StatefulWidget {
   final Map<String, dynamic> userData;
 
@@ -311,11 +311,16 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 children: [
 
                   IconButton(
-                    icon: const Icon(Icons.message,
-                        color: Colors.white),
-                    onPressed: () {},
+                    icon: const Icon(Icons.message, color: Colors.white),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TeacherMessagePage(),
+                        ),
+                      );
+                    },
                   ),
-
                   IconButton(
                     icon: const Icon(Icons.logout,
                         color: Colors.white),

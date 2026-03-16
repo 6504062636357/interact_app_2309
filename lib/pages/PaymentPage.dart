@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import '../config.dart';
 import '../model/course.model.dart';
 import 'PaymentSuccessPage.dart';
-
+import 'package:flutter_svg/flutter_svg.dart';
 class PaymentPage extends StatefulWidget {
   final CourseModel course;
 
@@ -316,15 +316,21 @@ class _PaymentPageState extends State<PaymentPage> {
                               : showQr
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(18),
-                                      child: Image.network(
-                                        qrUrl,
+                                      child: SvgPicture.memory(
+                                        base64Decode(qrUrl.split(',').last),
                                         fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) {
-                                          return const Center(
-                                            child: Text("Unable to load QR"),
-                                          );
-                                        },
-                                      ),
+                                      )
+                            //
+                            //
+                            // Image.network(
+                                      //   qrUrl,
+                                      //   fit: BoxFit.contain,
+                                      //   errorBuilder: (_, __, ___) {
+                                      //     return const Center(
+                                      //       child: Text("Unable to load QR"),
+                                      //     );
+                                      //   },
+                                      // ),
                                     )
                                   : Center(
                                       child: Text(

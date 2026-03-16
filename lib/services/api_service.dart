@@ -40,39 +40,56 @@ class ApiService {
     required String email,
     required String name,
   }) async {
+
     try {
+
       final url = Uri.parse('${AppConfig.baseUrl}/api/users/sync');
-      print("--- [API DEBUG] Syncing to: $url");
+
+      // ⭐ ดึง Firebase token
+      final token = await FirebaseAuth.instance.currentUser!.getIdToken();
 
       final response = await http.post(
+
         url,
-        headers: {'Content-Type': 'application/json'},
+
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // ⭐ สำคัญมาก
+        },
+
         body: jsonEncode({
-          "firebaseUid": uid.trim(),
+          "authUid": uid,
           "email": email,
           "name": name,
           "learnedToday": 0,
           "goalMinutes": 60,
         }),
+
       );
 
-      print("--- [API DEBUG] Status: ${response.statusCode}");
+      print("SYNC STATUS: ${response.statusCode}");
+      print("SYNC BODY: ${response.body}");
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final decodedData = jsonDecode(response.body);
-        print("--- [API DEBUG] MongoDB Sync SUCCESS! Data: $decodedData");
+      if (response.statusCode == 200 || response.statusCode == 201) {
 
-        // ส่งข้อมูลทั้งหมดที่ได้จาก Server (รวมถึง role) กลับไป
-        return decodedData;
-      } else {
-        print("--- [API DEBUG] FAILED: ${response.body}");
-        return null;
+        final data = jsonDecode(response.body);
+
+        return data["user"]; // ⭐ backend return {message,user}
+
       }
-    } catch (e) {
-      print("--- [API DEBUG] Connection Error: $e");
+
       return null;
+
+    } catch (e) {
+
+      print("SYNC ERROR: $e");
+
+      return null;
+
     }
+
   }
+
   static Future<Map<String, dynamic>> getDashboard() async {
     final user = FirebaseAuth.instance.currentUser;
     final uid = user?.uid; // ดึง UID จาก Firebase
