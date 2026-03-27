@@ -1,3 +1,4 @@
+import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -77,8 +78,43 @@ class _PaymentPageState extends State<PaymentPage> {
 
       final data = jsonDecode(response.body);
 
+      if (response.statusCode == 409) {
+        if (data["alreadyPurchased"] == true) {
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("You already purchased this course")),
+          );
+
+          Navigator.pop(context, true);
+          return;
+        }
+
+        if (data["pendingPayment"] == true) {
+          if (!mounted) return;
+
+          setState(() {
+            chargeId = data["chargeId"] ?? "";
+            paymentStatus = "pending";
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "You already have a pending payment for this course",
+              ),
+            ),
+          );
+
+          return;
+        }
+      }
+
       if (response.statusCode != 200) {
         throw Exception(data["message"] ?? "Create payment failed");
+      }
+      if (chargeId.isNotEmpty) {
+        startCheckStatus();
       }
 
       // ถ้าเป็น PromptPay ให้เอา QR มาแสดง
@@ -110,9 +146,9 @@ class _PaymentPageState extends State<PaymentPage> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (!mounted) return;
 
@@ -141,9 +177,7 @@ class _PaymentPageState extends State<PaymentPage> {
 
         final res = await http.get(
           Uri.parse('${AppConfig.baseUrl}/api/payments/status/$chargeId'),
-          headers: {
-            "Authorization": "Bearer $token",
-          },
+          headers: {"Authorization": "Bearer $token"},
         );
 
         final data = jsonDecode(res.body);
@@ -191,14 +225,15 @@ class _PaymentPageState extends State<PaymentPage> {
         statusTimer?.cancel();
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("QR payment expired. Please try again.")),
+          const SnackBar(
+            content: Text("QR payment expired. Please try again."),
+          ),
         );
 
         setState(() {
           print("QR URL IN STATE: $qrUrl");
           chargeId = "";
           paymentStatus = "expired";
-          
         });
 
         return;
@@ -251,10 +286,7 @@ class _PaymentPageState extends State<PaymentPage> {
         fit: BoxFit.contain,
         errorBuilder: (_, __, ___) {
           return const Center(
-            child: Text(
-              "Logo",
-              style: TextStyle(fontSize: 10),
-            ),
+            child: Text("Logo", style: TextStyle(fontSize: 10)),
           );
         },
       ),
@@ -310,34 +342,32 @@ class _PaymentPageState extends State<PaymentPage> {
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: isCreatingPayment
-                              ? const Center(
-                                  child: CircularProgressIndicator(),
-                                )
+                              ? const Center(child: CircularProgressIndicator())
                               : showQr
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(18),
-                                      child: Image.network(
-                                        qrUrl,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) {
-                                          return const Center(
-                                            child: Text("Unable to load QR"),
-                                          );
-                                        },
-                                      ),
-                                    )
-                                  : Center(
-                                      child: Text(
-                                        paymentMethod == "promptpay"
-                                            ? "Press Confirm to generate QR"
-                                            : "Press Confirm to continue with card payment",
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: Colors.black54,
-                                          fontSize: 16,
-                                        ),
-                                      ),
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(18),
+                                  child: Image.network(
+                                    qrUrl,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) {
+                                      return const Center(
+                                        child: Text("Unable to load QR"),
+                                      );
+                                    },
+                                  ),
+                                )
+                              : Center(
+                                  child: Text(
+                                    paymentMethod == "promptpay"
+                                        ? "Press Confirm to generate QR"
+                                        : "Press Confirm to continue with card payment",
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.black54,
+                                      fontSize: 16,
                                     ),
+                                  ),
+                                ),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -450,7 +480,8 @@ class _PaymentPageState extends State<PaymentPage> {
                             ),
                           ),
                           const SizedBox(height: 14),
-                          if (paymentMethod == "promptpay" && chargeId.isNotEmpty)
+                          if (paymentMethod == "promptpay" &&
+                              chargeId.isNotEmpty)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -459,7 +490,9 @@ class _PaymentPageState extends State<PaymentPage> {
                                   style: TextStyle(fontWeight: FontWeight.w500),
                                 ),
                                 Text(
-                                  paymentStatus.isEmpty ? "pending" : paymentStatus,
+                                  paymentStatus.isEmpty
+                                      ? "pending"
+                                      : paymentStatus,
                                   style: TextStyle(
                                     color: paymentStatus == "successful"
                                         ? Colors.green
@@ -469,9 +502,11 @@ class _PaymentPageState extends State<PaymentPage> {
                                 ),
                               ],
                             ),
-                          if (paymentMethod == "promptpay" && chargeId.isNotEmpty)
+                          if (paymentMethod == "promptpay" &&
+                              chargeId.isNotEmpty)
                             const SizedBox(height: 12),
-                          if (paymentMethod == "promptpay" && chargeId.isNotEmpty)
+                          if (paymentMethod == "promptpay" &&
+                              chargeId.isNotEmpty)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -560,7 +595,9 @@ class _PaymentPageState extends State<PaymentPage> {
                               borderRadius: BorderRadius.circular(14),
                             ),
                           ),
-                          onPressed: loading ? null : createPayment,
+                          onPressed: (loading || chargeId.isNotEmpty)
+                              ? null
+                              : createPayment,
                           child: loading
                               ? const SizedBox(
                                   width: 24,
@@ -570,9 +607,11 @@ class _PaymentPageState extends State<PaymentPage> {
                                     strokeWidth: 2.6,
                                   ),
                                 )
-                              : const Text(
-                                  "Confirm",
-                                  style: TextStyle(
+                              : Text(
+                                  chargeId.isNotEmpty
+                                      ? "Waiting for Payment"
+                                      : "Confirm",
+                                  style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,

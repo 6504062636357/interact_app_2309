@@ -46,6 +46,7 @@ dependencies:
   firebase_messaging: ^15.2.9
   flutter_onscreen_keyboard: ^0.4.2
   omise_flutter: ^0.5.0
+  flutter_svg: ^2.0.10+1
 
 dev_dependencies:
   flutter_test:
