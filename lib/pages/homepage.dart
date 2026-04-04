@@ -5,8 +5,9 @@ import '../services/api_service.dart';
 import 'Account.dart';
 import 'Course.dart';
 import 'profile_page.dart';
-import 'Message.dart'; // คงไว้ตามเดิม
-import 'MainBookingPage.dart'; // เพิ่มการ Import หน้า Booking
+import 'Message.dart';
+import 'MainBookingPage.dart';
+import 'ProgressStudent.dart';
 
 class HomePage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -18,24 +19,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  //late Future<Map<String, dynamic>> _futureDashboard;
   Future<Map<String, dynamic>>? _futureDashboard;
   int _selectedIndex = 0;
 
-  // เปลี่ยนจาก SearchPage เป็น MainBookingPage
-  final List<Widget> _widgetOptions = <Widget>[
-    Container(), // หน้า Home หลัก (Index 0)
-    const CoursePage(), // Index 1
-    const MainBookingPage(), // Index 2: หน้า Booking ใหม่
-    MessagePage(), // Index 3: คง Message ไว้ตามเดิม
-    const ProfilePage(), // Index 4
-  ];
-
-  @override
-  // void initState() {
-  //   super.initState();
-  //   _futureDashboard = ApiService.getDashboard();
-  // }
   @override
   void initState() {
     super.initState();
@@ -51,7 +37,7 @@ class _HomePageState extends State<HomePage> {
     setState(() => _selectedIndex = index);
   }
 
-  // ---------------- HEADER (คงเดิม) ----------------
+  // ---------------- HEADER ----------------
   Widget _buildHeader(String userName) {
     return Container(
       height: 220,
@@ -60,23 +46,51 @@ class _HomePageState extends State<HomePage> {
       decoration: const BoxDecoration(
         color: Color(0xFF004D6D),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            "Hi, $userName",
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Hi, $userName",
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "Let's start learning",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          const Text(
-            "Let's start learning",
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white70,
+
+          // MESSAGE BUTTON
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MessagePage(),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.messenger_outline,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -84,7 +98,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ---------------- LEARN TODAY CARD (คงเดิม) ----------------
+  // ---------------- LEARNING CARD ----------------
   Widget _buildLearningStatus(Map<String, dynamic> user) {
     final learned = user['learnedToday'];
     final goal = user['goalMinutes'];
@@ -128,11 +142,12 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 12),
             LinearProgressIndicator(
-              value: progress,
+              value: progress.toDouble(),
               minHeight: 8,
               borderRadius: BorderRadius.circular(6),
               backgroundColor: Colors.blue.shade100,
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+              valueColor:
+              const AlwaysStoppedAnimation<Color>(Colors.orange),
             ),
           ],
         ),
@@ -142,10 +157,18 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ ย้ายมาไว้ใน build เพื่อให้ rebuild ทุกครั้ง
+    final List<Widget> widgetOptions = [
+      Container(), // index 0 = Home (handled by FutureBuilder below)
+      const CoursePage(),        // index 1
+      const MainBookingPage(),   // index 2
+      const ProgressStudent(),   // index 3 ✅
+      const ProfilePage(),       // index 4
+    ];
+
     return Scaffold(
       body: _selectedIndex == 0
           ? FutureBuilder<Map<String, dynamic>>(
-      //  future: _futureDashboard,
         future: _futureDashboard ?? ApiService.getDashboard(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -156,8 +179,11 @@ class _HomePageState extends State<HomePage> {
           }
 
           final data = snapshot.data!;
-          final user = data["user"] ??
-              {"name": "User", "learnedToday": 0, "goalMinutes": 0};
+          final user = data["user"] ?? {
+            "name": "User",
+            "learnedToday": 0,
+            "goalMinutes": 0
+          };
 
           return SafeArea(
             child: SingleChildScrollView(
@@ -169,7 +195,8 @@ class _HomePageState extends State<HomePage> {
                   Transform.translate(
                     offset: const Offset(0, -40),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding:
+                      const EdgeInsets.symmetric(horizontal: 16),
                       child: _buildLearningStatus(user),
                     ),
                   ),
@@ -181,8 +208,9 @@ class _HomePageState extends State<HomePage> {
           );
         },
       )
-          : _widgetOptions[_selectedIndex],
+          : widgetOptions[_selectedIndex], // ✅ ใช้ local list
 
+      // ---------------- BOTTOM BAR ----------------
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -191,7 +219,7 @@ class _HomePageState extends State<HomePage> {
             topRight: Radius.circular(30),
           ),
           boxShadow: [
-            BoxShadow(color: Colors.black12, spreadRadius: 0, blurRadius: 10),
+            BoxShadow(color: Colors.black12, blurRadius: 10),
           ],
         ),
         child: BottomNavigationBar(
@@ -202,37 +230,25 @@ class _HomePageState extends State<HomePage> {
           elevation: 0,
           selectedItemColor: const Color(0xFF004D6D),
           unselectedItemColor: Colors.blueGrey.shade300,
-          selectedFontSize: 12,
-          unselectedFontSize: 12,
-          items: [
-            const BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-            const BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'Course'),
+          items: const [
             BottomNavigationBarItem(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _selectedIndex == 2 ? const Color(0xFFE9F2F5) : Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.calendar_today_outlined,
-                  color: _selectedIndex == 2 ? const Color(0xFF004D6D) : Colors.blueGrey.shade300,
-                ),
-              ),
-              label: 'Booking',
-            ),
-            const BottomNavigationBarItem(icon: Icon(Icons.messenger_outline), label: 'Message'),
-            const BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Account'),
+                icon: Icon(Icons.home_filled), label: 'Home'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.menu_book), label: 'Course'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.calendar_today_outlined), label: 'Booking'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.bar_chart), label: 'Progress'), // index 3 ✅
+            BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline), label: 'Account'),
           ],
         ),
       ),
     );
   }
 
-  // ---------------- BODY (คงเดิม) ----------------
+  // ---------------- BODY ----------------
   Widget _buildHomeBody(Map<String, dynamic>? data) {
-    final hotCourse = data?["hotCourse"];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -248,82 +264,16 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-        _buildHotCourseCard(hotCourse),
-        const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            "Calendar",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-        ),
+        const SizedBox(height: 20),
         _buildCalendar(),
         _buildBookingSection(),
-        const SizedBox(height: 40),
       ],
-    );
-  }
-
-  // ... (ฟังก์ชันอื่นๆ _buildHotCourseCard, _buildCalendar, _buildBookingSection คงไว้ตามเดิม)
-  Widget _buildHotCourseCard(Map<String, dynamic>? hotCourse) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 180,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0F7FA),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    hotCourse?["title"] ?? "Coding Story (Python)",
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF004D6D),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text("Start now", style: TextStyle(color: Colors.white),),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            height: 180,
-            width: 90,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Center(
-              child: Icon(Icons.check_circle, size: 40, color: Colors.green),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildCalendar() {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: const Padding(
         padding: EdgeInsets.all(24),
         child: Center(child: Text("Calendar UI")),
@@ -350,4 +300,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-

@@ -24,7 +24,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   bool _isLoading = true;
 
   List<dynamic> _pendingClasses = [];
-  List<dynamic> _waitingPaymentClasses = [];
   List<dynamic> _confirmedClasses = [];
 
   late List<Widget> pages;
@@ -32,10 +31,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   @override
   void initState() {
     super.initState();
-
+    print("USER DATA: ${widget.userData}");
+    print("AUTH UID: ${widget.userData['authUid']}");
     pages = [
-      const SizedBox(), // index 0 ไม่ใช้
-      const TeacherGradeBook(),
+      const SizedBox(),
+      TeacherGradeBook(
+        teacherAuthUid: widget.userData['authUid'], // ✅ ใช้อันนี้
+      ),
       TeacherRequestBooking(
         teacherId: widget.userData['_id'],
       ),
@@ -59,11 +61,10 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         _pendingClasses =
             data.where((b) => b['status'] == 'pending').toList();
 
-        _waitingPaymentClasses =
-            data.where((b) => b['status'] == 'accepted').toList();
 
-        _confirmedClasses =
-            data.where((b) => b['status'] == 'completed').toList();
+        _confirmedClasses = data.where((b) =>
+        b['status'] == 'accepted' || b['status'] == 'completed'
+        ).toList();
 
         _isLoading = false;
 
@@ -181,7 +182,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                     const SizedBox(height: 15),
 
                     ...[
-                      ..._waitingPaymentClasses,
                       ..._confirmedClasses
                     ].map((booking) =>
                         _buildEventItem(booking)).toList(),
@@ -239,12 +239,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 ),
 
                 const SizedBox(width: 12),
-
-                _buildStatCard(
-                    "To Pay",
-                    "${_waitingPaymentClasses.length}",
-                    Colors.orange,
-                    Icons.payment),
 
                 const SizedBox(width: 12),
 
@@ -394,6 +388,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
+  //list ด้านล่าง upcoming event
   Widget _buildEventItem(dynamic booking) {
 
     bool isPaid = booking['status'] == 'completed';

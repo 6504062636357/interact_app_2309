@@ -26,7 +26,7 @@ class _PaymentPageState extends State<PaymentPage> {
   String paymentStatus = "";
   bool loading = false;
   bool isCreatingPayment = false;
-
+  String? paymentId;
   Timer? statusTimer;
   Timer? countdownTimer;
 
@@ -91,6 +91,11 @@ class _PaymentPageState extends State<PaymentPage> {
           chargeId = data["chargeId"] ?? "";
           paymentStatus = data["status"] ?? "pending";
         });
+
+        if (data["payment"] != null) {
+          paymentId = data["payment"]["_id"].toString();
+          print("DEBUG: paymentId has been set to -> $paymentId");
+        }
 
         if (chargeId.isNotEmpty) {
           startCheckStatus();
@@ -166,7 +171,7 @@ class _PaymentPageState extends State<PaymentPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (_) => PaymentSuccessPage(course: widget.course),
+                builder: (_) => PaymentSuccessPage(course: widget.course,paymentId: paymentId,),
               ),
             );
           }

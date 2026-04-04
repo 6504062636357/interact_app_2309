@@ -339,6 +339,17 @@ class ApiService {
     if (res.statusCode != 200) throw Exception("Failed to update status");
   }
 
+  static Future<List> getAnalysis(String uid) async {
+    final res = await http.get(
+      Uri.parse("http://localhost:4000/api/grades/analysis/$uid"),
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
+    } else {
+      throw Exception("Failed: ${res.body}");
+    }
+  }
 
 }
 

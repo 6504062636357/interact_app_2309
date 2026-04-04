@@ -29,7 +29,7 @@ class _CoursePageState extends State<CoursePage> {
   String _selectedSort = 'All';
   RangeValues _priceRange = const RangeValues(0, 25000);
   String? _selectedDuration;
-  // เพิ่มบรรทัดนี้เข้าไปครับ
+
   String _errorMessage = '';
 
   @override
@@ -42,7 +42,6 @@ class _CoursePageState extends State<CoursePage> {
     });
   }
 
-  // แก้ไข: ฟังก์ชันสำหรับเลือก Tab ที่จะแสดงผลแบบปลอดภัย
   Widget _buildTabContent() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF4A68FF)));
@@ -86,14 +85,14 @@ class _CoursePageState extends State<CoursePage> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _allCourses = []; // ถ้าพังให้เป็น List ว่าง
+          _allCourses = [];
           _isLoading = false;
         });
       }
       debugPrint("API Error: $e");
     }
   }
-  // --- [ ส่วนของ UI BottomSheet และ UI อื่นๆ คงเดิมตามโค้ดต้นฉบับของคุณ ] ---
+
   void _showFilterBottomSheet() {
     OnscreenKeyboard.of(context).close();
     showModalBottomSheet(
@@ -277,7 +276,6 @@ class _CoursePageState extends State<CoursePage> {
     );
   }
 
-  // --- Widget Helpers (คงเดิม) ---
   Widget _categoryCard(String title, Color bg, Color textCol, IconData icon) {
     final bool isSel = _selectedCategory == title;
     return Expanded(

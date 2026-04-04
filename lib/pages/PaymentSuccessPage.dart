@@ -5,8 +5,12 @@ import 'BookingPage.dart';
 
 class PaymentSuccessPage extends StatefulWidget {
   final CourseModel course;
-
-  const PaymentSuccessPage({super.key, required this.course});
+  final String? paymentId;
+  const PaymentSuccessPage({
+    super.key,
+    required this.course,
+    this.paymentId,
+  });
 
   @override
   State<PaymentSuccessPage> createState() => _PaymentSuccessPageState();
@@ -152,10 +156,11 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                               ),
                             ),
                             onPressed: () {
+                              print("DEBUG 3: Sending to BookingPage -> ${widget.paymentId}");
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => BookingPage(course: widget.course),
+                                  builder: (_) => BookingPage(course: widget.course,paymentId: widget.paymentId,),
                                 ),
                               );
                             },

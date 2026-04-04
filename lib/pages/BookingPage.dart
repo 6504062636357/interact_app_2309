@@ -8,7 +8,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class BookingPage extends StatefulWidget {
   final CourseModel course;
-  const BookingPage({super.key, required this.course});
+  final String? paymentId;
+  const BookingPage({
+    super.key,
+    required this.course,
+   this.paymentId //ตัวแปรที่ส่งสถานะการชำระเงินไปให้ booking ดูว่าชำระเงินเรียบร้อยยัง
+  });
 
   @override
   State<BookingPage> createState() => _BookingPageState();
@@ -27,6 +32,7 @@ class _BookingPageState extends State<BookingPage> {
   @override
   void initState() {
     super.initState();
+    print("DEBUG: Booking Page received ID -> ${widget.paymentId}");
     _selectedDay = _focusedDay;
     _loadData();
   }
@@ -40,7 +46,7 @@ class _BookingPageState extends State<BookingPage> {
       setState(() {
         if (instructor != null) {
           _instructors = [instructor]; // แสดงแค่ครูที่สอนวิชานี้จริง
-          _selectedInstructorId = instructor['_id']; // ล็อก ID ครูคนนี้ไว้เลย
+          _selectedInstructorId = instructor['_id']; // ล็อก ID ครู
         }
         _isLoading = false;
       });
@@ -341,8 +347,8 @@ class _BookingPageState extends State<BookingPage> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15)),
               ),
-              // ค้นหา Widget _buildBottomAction() แล้วแก้ส่วน onPressed ดังนี้ครับ
               onPressed: () async {
+                print("DEBUG 4: Final Payment ID in BookingPage -> ${widget.paymentId}");
                 if (_selectedDay != null && _selectedTime != null && _selectedInstructorId != null) {
 
                   setState(() => _isLoading = true); // เริ่มโหลด
@@ -359,6 +365,7 @@ class _BookingPageState extends State<BookingPage> {
                       "instructor_id": _selectedInstructorId,
                       "booking_date": DateFormat('yyyy-MM-dd').format(_selectedDay!),
                       "booking_time": _selectedTime, // ส่งค่าเช่น "10:00 AM - 12:00 PM"
+                      "payment_id": widget.paymentId,
                     };
 
                     // 3. เรียก API ส่งข้อมูลไป Backend

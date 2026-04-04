@@ -101,38 +101,27 @@ class _MessagePageState extends State<MessagePage> {
 
   /// CHAT LIST
   Widget _buildChatList() {
-
     return StreamBuilder<QuerySnapshot>(
-
       stream: FirebaseFirestore.instance
           .collection('chat_rooms')
           .where('participants',
           arrayContains: currentUserId)
           .orderBy('updatedAt', descending: true)
           .snapshots(),
-
       builder: (context, snapshot) {
-
         if (!snapshot.hasData) {
           return const Center(
               child: CircularProgressIndicator());
         }
-
         var docs = snapshot.data!.docs;
-
         if (docs.isEmpty) {
           return const Center(
               child: Text("No conversations found"));
         }
-
         return ListView.builder(
-
           padding: const EdgeInsets.all(20),
-
           itemCount: docs.length,
-
           itemBuilder: (context, index) {
-
             var room =
             docs[index].data() as Map<String, dynamic>;
 
@@ -146,13 +135,10 @@ class _MessagePageState extends State<MessagePage> {
                   (id) => id != currentUserId,
               orElse: () => "",
             );
-
             if (otherUserId.isEmpty) {
               return const SizedBox();
             }
-
             return FutureBuilder<DocumentSnapshot>(
-
               future: FirebaseFirestore.instance
                   .collection('users')
                   .doc(otherUserId)

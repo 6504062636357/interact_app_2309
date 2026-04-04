@@ -21,7 +21,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _loading = false;
 
-  /// ⭐ Sync MongoDB → Firestore
+  ///  Sync MongoDB → Firestore
   Future<void> _syncUserToFirestore({
     required String name,
     required String role,
@@ -48,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await FirebaseAuth.instance.signOut();
-      // 1️⃣ Login Firebase
+      //  Login Firebase
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _email.text.trim(),
         password: _password.text.trim(),
@@ -58,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
 
       if (user != null) {
 
-        // 2️⃣ Sync กับ MongoDB และดึง user data
+        // Sync กับ MongoDB และดึง user data
         final userData = await ApiService.syncUserToMongo(
           uid: user.uid,
           email: user.email ?? "",
@@ -69,20 +69,17 @@ class _LoginPageState extends State<LoginPage> {
 
         if (userData != null) {
 
-          //String role = userData['role'] ?? 'student';
-          // String role = userData['user']['role'] ?? 'student';
-          // String name = userData['name'] ?? 'User';
           String role = userData['role'] ?? 'student';
           String name = userData['name'] ?? 'User';
 
-          // ⭐ 3️⃣ Sync ไป Firestore (ใช้สำหรับ Chat)
+          // Sync ไป Firestore (ใช้สำหรับ Chat)
           await _syncUserToFirestore(
             name: name,
             role: role,
             uid: user.uid,
           );
 
-          // 4️⃣ Redirect ตาม Role
+          //  Redirect ตาม Role
           if (role == 'teacher') {
 
             Navigator.pushReplacement(
@@ -120,7 +117,6 @@ class _LoginPageState extends State<LoginPage> {
       String message = "Login failed";
 
       switch (e.code) {
-
         case 'user-not-found':
         case 'wrong-password':
         case 'invalid-credential':
@@ -161,9 +157,7 @@ class _LoginPageState extends State<LoginPage> {
     }finally {
 
       setState(() => _loading = false);
-
     }
-
   }
 
   @override
@@ -178,74 +172,146 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F6FA),
 
-      appBar: AppBar(title: const Text("Login")),
-
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-
-        child: Column(
-          children: [
-
-            TextField(
-              controller: _email,
-              decoration: const InputDecoration(
-                labelText: "Email",
+      body: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 20,
+                    offset: Offset(0, 10),
+                  )
+                ],
               ),
-            ),
 
-            TextField(
-              controller: _password,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Password",
-              ),
-            ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
 
-            const SizedBox(height: 10),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-
-                const Text("Don't have an account?"),
-
-                TextButton(
-                  onPressed: () {
-
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SignUpPage(),
-                      ),
-                    );
-
-                  },
-
-                  child: const Text(
-                    "Sign Up",
+                  /// 🔥 Title
+                  const Text(
+                    "Log In",
                     style: TextStyle(
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
 
-                ),
+                  const SizedBox(height: 24),
 
-              ],
-            ),
+                  /// Email Label
+                  const Text("Your Email"),
 
-            const SizedBox(height: 20),
+                  const SizedBox(height: 8),
 
-            ElevatedButton(
-              onPressed: _loading ? null : _doLogin,
-              child: Text(
-                _loading ? "Loading..." : "Login",
+                  /// Email Field
+                  TextField(
+                    controller: _email,
+                    decoration: InputDecoration(
+                      hintText: "example@gmail.com",
+                      filled: true,
+                      fillColor: Color(0xFFF1F2F6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  /// Password Label
+                  const Text("Password"),
+
+                  const SizedBox(height: 8),
+
+                  /// Password Field
+                  TextField(
+                    controller: _password,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Color(0xFFF1F2F6),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: Icon(Icons.visibility_off),
+                    ),
+                  ),
+
+                  /// Forgot password
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {},
+                      child: const Text(
+                        "Forget password?",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  /// Login Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _doLogin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF4A6CF7),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        _loading ? "Loading..." : "Log In",
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  /// Create account
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Don’t have an account? "),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SignUpPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Create account",
+                          style: TextStyle(
+                            color: Color(0xFF4A6CF7),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-
-          ],
+          ),
         ),
       ),
     );

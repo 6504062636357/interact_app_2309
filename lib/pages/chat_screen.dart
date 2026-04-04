@@ -23,15 +23,11 @@ class _ChatScreenState extends State<ChatScreen> {
   String get currentUserId =>
       FirebaseAuth.instance.currentUser?.uid ?? "";
 
-  /// ส่งข้อความ
+
   Future<void> _sendText() async {
-
     if (_messageController.text.trim().isEmpty) return;
-
     String text = _messageController.text.trim();
-
     _messageController.clear();
-
     await FirebaseFirestore.instance
         .collection('chat_rooms')
         .doc(widget.roomId)
@@ -44,9 +40,7 @@ class _ChatScreenState extends State<ChatScreen> {
       "fileUrl": "",
       "isRead": false,
       "createdAt": FieldValue.serverTimestamp()
-
     });
-
     await FirebaseFirestore.instance
         .collection('chat_rooms')
         .doc(widget.roomId)
