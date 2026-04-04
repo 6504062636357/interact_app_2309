@@ -15,50 +15,181 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   bool _loading = false;
+  bool _obscurePassword = true;
+  String? _emailError;
+  String? _passwordError;
 
-  ///  Sync MongoDB → Firestore
   Future<void> _syncUserToFirestore({
     required String name,
     required String role,
     required String uid,
   }) async {
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .set({
-
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({
       'displayName': name,
       'role': role,
       'authUid': uid,
       'photoUrl': "",
       'lastActive': FieldValue.serverTimestamp(),
-
     }, SetOptions(merge: true));
   }
 
+  /// Validate fields before submitting
+  bool _validate() {
+    bool valid = true;
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+
+      if (_email.text.trim().isEmpty) {
+        _emailError = "Please enter your email address";
+        valid = false;
+      } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(_email.text.trim())) {
+        _emailError = "Please enter a valid email address";
+        valid = false;
+      }
+
+      if (_password.text.isEmpty) {
+        _passwordError = "Please enter your password";
+        valid = false;
+      } else if (_password.text.length < 6) {
+        _passwordError = "Password must be at least 6 characters";
+        valid = false;
+      }
+    });
+    return valid;
+  }
+
+  /// Show network error dialog (Netflix style)
+  void _showNetworkError() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3F3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.wifi_off_rounded,
+                    size: 40, color: Color(0xFFE53935)),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "No Internet Connection",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Please check your connection and try again.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A6CF7),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Try Again",
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Show general error dialog
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3F3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_outline_rounded,
+                    size: 40, color: Color(0xFFE53935)),
+              ),
+              const SizedBox(height: 20),
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey, fontSize: 14)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A6CF7),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Got it",
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _doLogin() async {
+    // Clear field errors first
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+    });
+
+    if (!_validate()) return;
 
     setState(() => _loading = true);
 
     try {
       await FirebaseAuth.instance.signOut();
-      //  Login Firebase
+
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _email.text.trim(),
-        password: _password.text.trim(),
+        password: _password.text, // ❌ ห้าม trim password
       );
 
       final user = credential.user;
 
       if (user != null) {
-
-        // Sync กับ MongoDB และดึง user data
         final userData = await ApiService.syncUserToMongo(
           uid: user.uid,
           email: user.email ?? "",
@@ -68,113 +199,92 @@ class _LoginPageState extends State<LoginPage> {
         if (!mounted) return;
 
         if (userData != null) {
-
           String role = userData['role'] ?? 'student';
           String name = userData['name'] ?? 'User';
 
-          // Sync ไป Firestore (ใช้สำหรับ Chat)
-          await _syncUserToFirestore(
-            name: name,
-            role: role,
-            uid: user.uid,
-          );
+          await _syncUserToFirestore(name: name, role: role, uid: user.uid);
 
-          //  Redirect ตาม Role
           if (role == 'teacher') {
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => TeacherDashboard(userData: userData),
-              ),
-            );
-
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (_) => TeacherDashboard(userData: userData)));
           } else {
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => HomePage(userData: userData),
-              ),
-            );
-
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (_) => HomePage(userData: userData)));
           }
-
         } else {
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("ไม่สามารถดึงข้อมูลผู้ใช้จากระบบได้"),
-            ),
+          _showErrorDialog(
+            "Something went wrong",
+            "We couldn't load your profile. Please try again.",
           );
-
         }
-
       }
-
     } on FirebaseAuthException catch (e) {
-
-      String message = "Login failed";
+      if (!mounted) return;
 
       switch (e.code) {
         case 'user-not-found':
         case 'wrong-password':
         case 'invalid-credential':
-          message = "Invalid email or password";
+        // ❗ Highlight fields แทน Dialog
+          setState(() {
+            _emailError = "Incorrect email or password";
+            _passwordError = "Incorrect email or password";
+          });
           break;
 
         case 'invalid-email':
-          message = "Invalid email format";
+          setState(() => _emailError = "Please enter a valid email address");
           break;
 
         case 'user-disabled':
-          message = "This user has been disabled";
+          _showErrorDialog(
+            "Account Suspended",
+            "Your account has been disabled. Please contact support.",
+          );
           break;
 
         case 'too-many-requests':
-          message = "Too many attempts. Please try again later";
+          _showErrorDialog(
+            "Too Many Attempts",
+            "Your account is temporarily locked. Please wait a moment before trying again.",
+          );
+          break;
+
+        case 'network-request-failed':
+          _showNetworkError();
           break;
 
         default:
-          message = e.message ?? "Authentication error";
-
+          _showErrorDialog("Sign In Failed", e.message ?? "An unexpected error occurred. Please try again.");
       }
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-
     } catch (e) {
-      print("LOGIN ERROR: $e");
-
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    }finally {
-
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('network') || msg.contains('socket') || msg.contains('timeout')) {
+        _showNetworkError();
+      } else {
+        _showErrorDialog(
+          "Something went wrong",
+          "An unexpected error occurred. Please try again.",
+        );
+      }
+    } finally {
       setState(() => _loading = false);
     }
   }
 
   @override
   void dispose() {
-
     _email.dispose();
     _password.dispose();
-
     super.dispose();
-
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
-
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -188,118 +298,173 @@ class _LoginPageState extends State<LoginPage> {
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 20,
-                    offset: Offset(0, 10),
+                    offset: const Offset(0, 10),
                   )
                 ],
               ),
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
-                  /// 🔥 Title
                   const Text(
-                    "Log In",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    "Welcome back 👋",
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    "Sign in to continue",
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                  const SizedBox(height: 28),
 
-                  const SizedBox(height: 24),
-
-                  /// Email Label
-                  const Text("Your Email"),
-
+                  // ── Email ──
+                  const Text("Email address",
+                      style: TextStyle(fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
-
-                  /// Email Field
                   TextField(
                     controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    onChanged: (_) => setState(() => _emailError = null),
                     decoration: InputDecoration(
                       hintText: "example@gmail.com",
                       filled: true,
-                      fillColor: Color(0xFFF1F2F6),
+                      fillColor: _emailError != null
+                          ? const Color(0xFFFFF0F0)
+                          : const Color(0xFFF1F2F6),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: _emailError != null
+                            ? const BorderSide(color: Color(0xFFE53935), width: 1.5)
+                            : BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: _emailError != null
+                              ? const Color(0xFFE53935)
+                              : const Color(0xFF4A6CF7),
+                          width: 1.5,
+                        ),
+                      ),
+                      errorText: _emailError,
+                      errorStyle: const TextStyle(fontSize: 12),
                     ),
                   ),
 
                   const SizedBox(height: 16),
 
-                  /// Password Label
-                  const Text("Password"),
-
+                  // ── Password ──
+                  const Text("Password",
+                      style: TextStyle(fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
-
-                  /// Password Field
                   TextField(
                     controller: _password,
-                    obscureText: true,
+                    obscureText: _obscurePassword == true,
+                    onChanged: (_) => setState(() => _passwordError = null),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: Color(0xFFF1F2F6),
+                      fillColor: _passwordError != null
+                          ? const Color(0xFFFFF0F0)
+                          : const Color(0xFFF1F2F6),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      suffixIcon: Icon(Icons.visibility_off),
-                    ),
-                  ),
-
-                  /// Forgot password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        "Forget password?",
-                        style: TextStyle(color: Colors.grey),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: _passwordError != null
+                            ? const BorderSide(color: Color(0xFFE53935), width: 1.5)
+                            : BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: _passwordError != null
+                              ? const Color(0xFFE53935)
+                              : const Color(0xFF4A6CF7),
+                          width: 1.5,
+                        ),
+                      ),
+                      errorText: _passwordError,
+                      errorStyle: const TextStyle(fontSize: 12),
+                      // ✅ ลูกตาใช้งานได้จริง
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 10),
+                  // ── Forgot Password ──
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {},
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF4A6CF7),
+                      ),
+                      child: const Text("Forgot password?",
+                          style: TextStyle(fontSize: 13)),
+                    ),
+                  ),
 
-                  /// Login Button
+                  const SizedBox(height: 4),
+
+                  // ── Login Button ──
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
                       onPressed: _loading ? null : _doLogin,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF4A6CF7),
+                        backgroundColor: const Color(0xFF4A6CF7),
+                        disabledBackgroundColor: const Color(0xFF4A6CF7).withOpacity(0.6),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                            borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
                       ),
-                      child: Text(
-                        _loading ? "Loading..." : "Log In",
-                        style: const TextStyle(fontSize: 16),
+                      child: _loading
+                          ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                          : const Text(
+                        "Sign In",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
 
                   const SizedBox(height: 20),
 
-                  /// Create account
+                  // ── Create Account ──
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don’t have an account? "),
+                      const Text("Don't have an account? ",
+                          style: TextStyle(color: Colors.grey)),
                       GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SignUpPage(),
-                            ),
-                          );
-                        },
+                        onTap: () => Navigator.push(context,
+                            MaterialPageRoute(builder: (_) => const SignUpPage())),
                         child: const Text(
-                          "Create account",
+                          "Sign up",
                           style: TextStyle(
                             color: Color(0xFF4A6CF7),
                             fontWeight: FontWeight.bold,
